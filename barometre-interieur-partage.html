@@ -1,0 +1,2264 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Baromètre Intérieur</title>
+<meta name="description" content="Suivi personnel : énergie, besoins, symptômes et sujets à aborder.">
+
+<!-- PWA : manifest + icônes -->
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+
+<!-- Android / navigateurs Chromium -->
+<meta name="theme-color" content="#4B6B60">
+
+<!-- iOS Safari : mode standalone -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Baromètre">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style id="app-style">
+  :root{
+    --bg:#F6F4EF;
+    --surface:#FFFFFF;
+    --surface-2:#ECE9E2;
+    --surface-3:#E2DEd3;
+    --border:#D8D4C9;
+    --text:#292722;
+    --text-muted:#6B675E;
+    --accent:#4B6B60;
+    --accent-soft:#DCE6E1;
+    --accent-contrast:#FFFFFF;
+    --focus:#2F5FA8;
+    --sw-neutral:#8A857A;
+    --sw-calm:#5C8371;
+    --sw-attention:#A9813F;
+    --sw-urgent:#A15C50;
+    --sw-rest:#786F92;
+    --sw-energy:#3F7488;
+    --shadow: 0 1px 2px rgba(30,28,20,0.06), 0 6px 20px rgba(30,28,20,0.08);
+    --radius:0;
+    --radius-sm:0;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#1B1A17;
+      --surface:#232220;
+      --surface-2:#2B2926;
+      --surface-3:#34322D;
+      --border:#3F3C36;
+      --text:#ECE8DF;
+      --text-muted:#ABA69B;
+      --accent:#86AC9C;
+      --accent-soft:#2E3B36;
+      --accent-contrast:#122019;
+      --focus:#7AA7E8;
+      --sw-neutral:#A7A194;
+      --sw-calm:#7FA48F;
+      --sw-attention:#C7A05B;
+      --sw-urgent:#C1857A;
+      --sw-rest:#A79CC4;
+      --sw-energy:#6FA8BE;
+      --shadow: 0 1px 2px rgba(0,0,0,0.35), 0 8px 24px rgba(0,0,0,0.35);
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#1B1A17;
+    --surface:#232220;
+    --surface-2:#2B2926;
+    --surface-3:#34322D;
+    --border:#3F3C36;
+    --text:#ECE8DF;
+    --text-muted:#ABA69B;
+    --accent:#86AC9C;
+    --accent-soft:#2E3B36;
+    --accent-contrast:#122019;
+    --focus:#7AA7E8;
+    --sw-neutral:#A7A194;
+    --sw-calm:#7FA48F;
+    --sw-attention:#C7A05B;
+    --sw-urgent:#C1857A;
+    --sw-rest:#A79CC4;
+    --sw-energy:#6FA8BE;
+    --shadow: 0 1px 2px rgba(0,0,0,0.35), 0 8px 24px rgba(0,0,0,0.35);
+  }
+
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; }
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:"Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+    font-size:16px;
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+  }
+  .mono{ font-family:"IBM Plex Mono", ui-monospace, Menlo, monospace; font-variant-numeric:tabular-nums; }
+  h1,h2,h3{ text-wrap:balance; font-weight:700; margin:0; }
+  button{ font-family:inherit; font-size:inherit; color:inherit; }
+  input{ font-family:inherit; font-size:inherit; color:inherit; }
+  :focus-visible{ outline:2px solid var(--focus); outline-offset:2px; border-radius:4px; }
+  @media (prefers-reduced-motion: reduce){
+    *{ animation-duration:0.001ms !important; transition-duration:0.001ms !important; }
+  }
+
+  #app{ min-height:100vh; padding-top:var(--ribbon-top-h,64px); padding-bottom:var(--ribbon-bot-h,68px); }
+
+  .readonly-banner{
+    display:none;
+    position:fixed; top:0; left:0; right:0; z-index:60;
+    background:var(--sw-attention); color:#241C0C;
+    text-align:center; font-size:13px; font-weight:700;
+    padding:calc(6px + env(safe-area-inset-top)) calc(12px + env(safe-area-inset-right)) 6px calc(12px + env(safe-area-inset-left));
+  }
+  body.is-readonly .readonly-banner{ display:block; }
+  body.is-readonly #app{ padding-top:calc(var(--ribbon-top-h,64px) + 28px); }
+  body.is-readonly .ribbon-top{ top:28px; }
+
+  /* ---------- Ribbons ---------- */
+  .ribbon{
+    position:fixed; left:0; right:0; z-index:50;
+    background:var(--surface); border:1px solid var(--border);
+    box-shadow:var(--shadow);
+    padding-left:env(safe-area-inset-left); padding-right:env(safe-area-inset-right);
+  }
+  .ribbon-top{ top:0; border-top:none; border-left:none; border-right:none; padding-top:env(safe-area-inset-top); }
+  .ribbon-bottom{ bottom:0; border-bottom:none; border-left:none; border-right:none; padding-bottom:env(safe-area-inset-bottom); }
+
+  .ribbon-inner{
+    max-width:960px; margin:0 auto;
+    display:flex; align-items:center; justify-content:center; gap:10px; flex-wrap:wrap;
+    padding:8px 14px;
+  }
+  .ribbon-bottom .ribbon-inner{ align-items:flex-start; }
+
+  .cluster{ display:flex; align-items:center; gap:8px; }
+  .cluster-grow{ flex:1 1 auto; justify-content:center; flex-wrap:wrap; }
+
+  .datetime{ display:flex; flex-direction:column; line-height:1.2; min-width:82px; }
+  .datetime .day{ font-size:11px; text-transform:uppercase; letter-spacing:0.06em; color:var(--text-muted); }
+  .datetime .time{ font-size:16px; font-weight:600; }
+
+  .pill-toggle{
+    display:inline-flex; align-items:center; gap:6px;
+    border:1px solid var(--border); background:var(--surface-2);
+    color:var(--text); border-radius:999px; padding:6px 12px;
+    cursor:pointer; font-size:13px; font-weight:600;
+    transition:background .15s ease, border-color .15s ease;
+  }
+  .pill-toggle:hover{ background:var(--surface-3); }
+  .pill-toggle[aria-pressed="true"]{ background:var(--accent-soft); border-color:var(--accent); }
+  .pill-toggle .dot{ width:7px; height:7px; border-radius:50%; background:var(--text-muted); flex:none; }
+  .pill-toggle[aria-pressed="true"] .dot{ background:var(--accent); }
+
+  .voyant-btn{
+    display:inline-flex; align-items:center; gap:8px;
+    border:1px solid var(--border); background:var(--surface-2);
+    border-radius:999px; padding:6px 12px 6px 8px; cursor:pointer;
+    font-size:13px; font-weight:600; color:var(--text); max-width:220px;
+  }
+  .voyant-btn:hover{ background:var(--surface-3); }
+  .swatch-dot{ width:11px; height:11px; border-radius:50%; flex:none; border:1px solid rgba(0,0,0,0.12); }
+  .voyant-label{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .voyant-btn-need{ max-width:none; align-items:flex-start; }
+  .need-list{ display:flex; flex-direction:column; align-items:flex-start; gap:3px; }
+  .need-pill{ display:inline-flex; align-items:center; gap:5px; white-space:nowrap; }
+  .need-pill .swatch-dot{ width:8px; height:8px; }
+  .need-pill .voyant-label{ font-size:11px; }
+
+  .gauge-block{ display:flex; flex-direction:column; align-items:flex-end; gap:3px; }
+  .note-link{
+    background:none; border:none; color:var(--text-muted); text-decoration:underline;
+    font-size:10.5px; cursor:pointer; padding:0; max-width:150px;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  .note-link:hover{ color:var(--text); }
+  textarea{
+    background:var(--surface); border:1px solid var(--border); color:var(--text);
+    padding:8px 10px; font-size:13px; width:100%; font-family:inherit; resize:vertical;
+  }
+
+  .gauge-btn{
+    display:inline-flex; align-items:center; gap:8px; cursor:pointer;
+    background:var(--surface-2); border:1px solid var(--border); border-radius:999px;
+    padding:5px 10px 5px 6px;
+  }
+  .gauge-btn:hover{ background:var(--surface-3); }
+  .battery{
+    width:30px; height:15px; border:1.5px solid var(--text-muted); border-radius:3px;
+    position:relative; padding:2px; flex:none;
+  }
+  .battery::after{
+    content:""; position:absolute; right:-4px; top:4px; width:2.5px; height:6px;
+    background:var(--text-muted); border-radius:0 2px 2px 0;
+  }
+  .battery-fill{ height:100%; border-radius:1px; background:var(--sw-energy); }
+  .gauge-label{ font-size:12px; font-weight:700; }
+  .gauge-caption{ font-size:10px; color:var(--text-muted); text-transform:uppercase; letter-spacing:.05em; }
+
+  /* Bouton de jauge coloré dynamiquement (énergie / disponibilité) :
+     tout le fond change du rouge au vert selon le pourcentage, et le
+     contenu interne bascule sur une teinte de contraste pour rester lisible. */
+  .gauge-btn.gauge-colored{ border-color:transparent; }
+  .gauge-btn.gauge-colored .battery{ border-color:var(--accent-contrast); }
+  .gauge-btn.gauge-colored .battery::after{ background:var(--accent-contrast); }
+  .gauge-btn.gauge-colored .battery-fill{ background:var(--accent-contrast) !important; opacity:.85; }
+  .gauge-btn.gauge-colored .gauge-label{ color:var(--accent-contrast); }
+  .gauge-btn.gauge-colored .gauge-caption{ color:var(--accent-contrast); opacity:.85; }
+
+  .timer-chip{
+    display:inline-flex; flex-direction:column; align-items:flex-start; gap:1px;
+    border:1px solid var(--border); background:var(--surface-2);
+    border-radius:10px; padding:5px 10px; cursor:pointer; text-align:left;
+  }
+  .timer-chip:hover{ background:var(--surface-3); }
+  .timer-chip .k{ font-size:9.5px; text-transform:uppercase; letter-spacing:.06em; color:var(--text-muted); }
+  .timer-chip .v{ font-size:13px; font-weight:700; }
+
+  .updated-note-row{
+    display:flex; align-items:center; justify-content:center; gap:10px;
+    padding:4px 14px 8px; flex-wrap:wrap;
+  }
+  .updated-note{ font-size:11px; color:var(--text-muted); text-align:center; }
+  .data-btn{
+    display:inline-flex; align-items:center; gap:6px;
+    border:1px solid var(--border); background:var(--surface-2); color:var(--text-muted);
+    border-radius:999px; padding:5px 11px; font-size:11.5px; font-weight:700; cursor:pointer;
+    white-space:nowrap;
+  }
+  .data-btn:hover{ background:var(--surface-3); }
+  .data-btn:disabled{ opacity:.6; cursor:default; }
+
+  /* ---------- Popovers ---------- */
+  .popover-layer{ position:fixed; inset:0; z-index:70; display:none; }
+  .popover-layer.open{ display:block; }
+  .popover-scrim{ position:absolute; inset:0; background:rgba(20,18,14,0.28); }
+  .popover{
+    position:absolute; background:var(--surface); border:1px solid var(--border);
+    border-radius:var(--radius); box-shadow:var(--shadow); padding:14px;
+    width:min(320px, calc(100vw - 32px)); max-height:70vh; overflow:auto;
+  }
+  .popover h3{ font-size:14px; margin-bottom:10px; }
+  .popover .hint{ font-size:12px; color:var(--text-muted); margin:6px 0 10px; }
+  .chip-row{ display:flex; flex-wrap:wrap; gap:6px; margin-bottom:10px; }
+  .chip{
+    border:1px solid var(--border); background:var(--surface-2); border-radius:999px;
+    padding:5px 10px; font-size:12.5px; cursor:pointer; display:inline-flex; align-items:center; gap:5px;
+  }
+  .chip:hover{ background:var(--surface-3); }
+  .chip[aria-pressed="true"]{ border-color:var(--accent); background:var(--accent-soft); }
+  .chip-disabled{ opacity:.4; pointer-events:none; }
+  .swatch-row{ display:flex; gap:6px; margin-bottom:10px; }
+  .swatch-pick{ width:22px; height:22px; border-radius:50%; border:2px solid transparent; cursor:pointer; }
+  .swatch-pick[aria-pressed="true"]{ border-color:var(--text); }
+  .field-row{ display:flex; gap:6px; }
+  .field-row input[type="text"]{ flex:1; }
+  input[type="text"], input[type="date"], input[type="time"]{
+    background:var(--surface); border:1px solid var(--border); color:var(--text);
+    border-radius:8px; padding:8px 10px; font-size:13px; width:100%;
+  }
+  input[type="range"]{ width:100%; accent-color:var(--accent); }
+  .btn{
+    border:1px solid var(--border); background:var(--surface-2); color:var(--text);
+    border-radius:8px; padding:8px 12px; font-size:13px; font-weight:700; cursor:pointer;
+  }
+  .btn:hover{ background:var(--surface-3); }
+  .btn-primary{ background:var(--accent); border-color:var(--accent); color:var(--accent-contrast); }
+  .btn-primary:hover{ filter:brightness(1.05); }
+  .btn-quiet{ background:transparent; border-color:transparent; color:var(--text-muted); text-decoration:underline; padding:6px 4px; }
+  .popover-actions{ display:flex; justify-content:flex-end; gap:8px; margin-top:12px; }
+
+  /* ---------- Tabs ---------- */
+  .tabbar{
+    position:fixed; left:0; right:0; z-index:45;
+    top:var(--ribbon-top-h,64px);
+    background:var(--bg); border-bottom:1px solid var(--border);
+  }
+  body.is-readonly .tabbar{ top:calc(var(--ribbon-top-h,64px) + 28px); }
+  .tabbar-inner{
+    max-width:960px; margin:0 auto; display:flex; gap:4px; overflow-x:auto;
+    padding:0 calc(10px + env(safe-area-inset-right)) 0 calc(10px + env(safe-area-inset-left));
+  }
+  .tab-btn{
+    background:none; border:none; padding:12px 14px; font-size:14px; font-weight:700;
+    color:var(--text-muted); cursor:pointer; border-bottom:2.5px solid transparent; white-space:nowrap;
+  }
+  .tab-btn:hover{ color:var(--text); }
+  .tab-btn[aria-selected="true"]{ color:var(--text); border-bottom-color:var(--accent); }
+  .tab-btn.has-warning{ box-shadow: inset 0 0 0 2px var(--sw-urgent); }
+  .tab-warning-icon{ margin-left:5px; }
+
+  main{ padding-top:44px; }
+  .wrap{
+    max-width:960px; margin:0 auto;
+    padding:20px calc(16px + env(safe-area-inset-right)) 40px calc(16px + env(safe-area-inset-left));
+  }
+  .panel{ display:none; }
+  .panel.active{ display:block; }
+
+  .card{
+    background:var(--surface); border:1px solid var(--border); border-radius:var(--radius);
+    padding:16px 18px; margin-bottom:16px;
+  }
+  .card h2{ font-size:15px; }
+  .card .sub{ font-size:12.5px; color:var(--text-muted); margin-top:2px; }
+  .card-head{ display:flex; justify-content:space-between; align-items:flex-start; gap:10px; margin-bottom:12px; }
+
+  .taglist{ display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px; }
+  .tag{
+    display:inline-flex; align-items:center; gap:6px;
+    border:1px solid var(--border); background:var(--surface-2);
+    border-radius:999px; padding:7px 8px 7px 13px; font-size:13.5px; cursor:pointer;
+  }
+  .tag:hover{ background:var(--surface-3); }
+  .tag[aria-pressed="true"]{ background:var(--accent-soft); border-color:var(--accent); font-weight:700; }
+  .tag .x{
+    border:none; background:transparent; color:var(--text-muted); cursor:pointer;
+    width:18px; height:18px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+    font-size:13px; line-height:1;
+  }
+  .tag .x:hover{ background:rgba(0,0,0,0.08); color:var(--text); }
+  .tag-static{ cursor:default; background:var(--accent-soft); border-color:var(--accent); font-weight:700; }
+  .tag-static:hover{ background:var(--accent-soft); }
+
+  .edit{
+    border:none; background:transparent; color:var(--text-muted); cursor:pointer;
+    width:18px; height:18px; display:flex; align-items:center; justify-content:center;
+    font-size:11px; line-height:1; flex:none;
+  }
+  .edit:hover{ background:rgba(0,0,0,0.08); color:var(--text); }
+
+  .add-row{ display:flex; gap:8px; }
+  .add-row input{ flex:1; }
+
+  /* Style de base pour tous les boutons "×" de suppression — certains
+     contextes (ex. vignette de protocole) n'avaient pas de règle scopée
+     dédiée, ce qui les laissait avec l'apparence par défaut du navigateur
+     (bouton blanc en thème sombre, "×" invisible). */
+  .x{
+    border:none; background:transparent; color:var(--text-muted); cursor:pointer;
+    width:22px; height:22px; font-size:14px; flex:none; line-height:1;
+    display:inline-flex; align-items:center; justify-content:center;
+  }
+  .x:hover{ background:rgba(0,0,0,0.08); color:var(--text); }
+
+  .reglist{ display:flex; flex-direction:column; gap:8px; margin:12px 0; }
+  .regitem{
+    display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+    border:1px solid var(--border); border-radius:10px; padding:9px 10px; background:var(--surface-2);
+  }
+  .regitem .label{ flex:1 1 180px; font-size:13.5px; }
+  .stategroup{ display:flex; gap:4px; flex-wrap:wrap; }
+  .state-btn{
+    border:1px solid var(--border); background:var(--surface); border-radius:7px;
+    padding:5px 8px; font-size:11.5px; font-weight:700; cursor:pointer; color:var(--text-muted);
+  }
+  .state-btn:hover{ background:var(--surface-3); }
+  .state-btn[aria-pressed="true"]{ color:var(--accent-contrast); }
+  .state-btn.necessaire[aria-pressed="true"]{ background:var(--sw-energy); border-color:var(--sw-energy); }
+  .state-btn.prevu[aria-pressed="true"]{ background:var(--sw-calm); border-color:var(--sw-calm); }
+  .state-btn.pas_necessaire[aria-pressed="true"]{ background:var(--sw-neutral); border-color:var(--sw-neutral); }
+  .state-btn.impossible[aria-pressed="true"]{ background:var(--sw-urgent); border-color:var(--sw-urgent); }
+  .state-btn.decale[aria-pressed="true"]{ background:var(--sw-attention); border-color:var(--sw-attention); }
+  .regitem .x{
+    border:none; background:transparent; color:var(--text-muted); cursor:pointer;
+    width:22px; height:22px; border-radius:50%; font-size:14px;
+  }
+  .regitem .x:hover{ background:rgba(0,0,0,0.08); color:var(--text); }
+
+  .section-title{ font-size:12px; text-transform:uppercase; letter-spacing:.07em; color:var(--text-muted); margin:18px 0 8px; }
+  .section-title:first-child{ margin-top:0; }
+
+  .needlist{ display:flex; flex-direction:column; gap:2px; }
+  .needrow{
+    display:flex; align-items:center; gap:10px; padding:8px 6px; border-radius:8px;
+  }
+  .needrow:hover{ background:var(--surface-2); }
+  .needrow input[type="checkbox"]{ width:19px; height:19px; accent-color:var(--accent); flex:none; }
+  .needrow label{ font-size:14.5px; flex:1; cursor:pointer; }
+  .needrow.checked label{ color:var(--text-muted); text-decoration:line-through; }
+  .needrow .x{ border:none; background:transparent; color:var(--text-muted); cursor:pointer; width:20px; height:20px; border-radius:50%; }
+  .needrow .x:hover{ background:rgba(0,0,0,0.08); color:var(--text); }
+
+  .restore-link{ background:none; border:none; color:var(--text-muted); text-decoration:underline; font-size:12px; cursor:pointer; padding:4px 0; }
+  .restore-link:hover{ color:var(--text); }
+
+  .empty-hint{ font-size:13px; color:var(--text-muted); padding:6px 2px 12px; }
+
+  .topic-row{
+    display:flex; align-items:center; gap:10px; padding:10px 10px;
+    border:1px solid var(--border); background:var(--surface-2); margin-bottom:8px; cursor:pointer;
+  }
+  .topic-row:hover{ background:var(--surface-3); }
+  .topic-row .topic-label{ flex:1 1 auto; font-size:14.5px; font-weight:700; }
+  .topic-status-row{ display:flex; gap:5px; flex-wrap:wrap; }
+  .status-chip{
+    border:1px solid var(--border); background:var(--surface);
+    padding:4px 8px; font-size:11px; font-weight:700; cursor:pointer; color:var(--text-muted);
+  }
+  .status-chip:hover{ background:var(--surface-3); }
+  .status-chip[aria-pressed="true"]{ color:var(--accent-contrast); }
+  .status-chip.abordee[aria-pressed="true"]{ background:var(--sw-calm); border-color:var(--sw-calm); }
+  .status-chip.comprise[aria-pressed="true"]{ background:var(--accent); border-color:var(--accent); }
+  .status-chip.revenir[aria-pressed="true"]{ background:var(--sw-attention); border-color:var(--sw-attention); }
+  .topic-row .x{ border:none; background:transparent; color:var(--text-muted); cursor:pointer; width:22px; height:22px; font-size:14px; flex:none; }
+  .topic-row .x:hover{ background:rgba(0,0,0,0.08); color:var(--text); }
+
+  .topic-popover-box{ width:min(440px, calc(100vw - 32px)); max-height:80vh; }
+  .subtopic-row{ display:flex; align-items:center; gap:6px; margin-bottom:5px; }
+  .subtopic-row .t{ flex:1; font-size:13.5px; }
+  .field-label{ font-size:11px; text-transform:uppercase; letter-spacing:.05em; color:var(--text-muted); margin:14px 0 5px; }
+  .field-label:first-child{ margin-top:0; }
+
+  .chip-select-row{ display:flex; flex-wrap:wrap; gap:8px; margin-bottom:4px; }
+
+  .proto-section{ margin-bottom:26px; }
+  .proto-section:last-child{ margin-bottom:0; }
+  .proto-section-title{ font-size:15px; font-weight:700; margin-bottom:10px; }
+  .proto-grid{ display:flex; flex-direction:column; gap:12px; margin-bottom:12px; }
+  .vignette{ border:1px solid var(--border); border-left:3px solid var(--accent); border-radius:10px; background:var(--surface-2); padding:12px 14px; }
+  .vignette-head{ display:flex; justify-content:space-between; align-items:flex-start; gap:8px; margin-bottom:8px; }
+  .vignette-head h3{ font-size:14px; }
+  .vignette-steps{ display:flex; flex-direction:column; gap:5px; margin-bottom:8px; }
+  .vignette-step{ display:flex; align-items:flex-start; gap:7px; }
+  .vignette-step .n{ font-size:12.5px; font-weight:700; color:var(--text-muted); flex:none; min-width:16px; font-family:"IBM Plex Mono", monospace; }
+  .vignette-step .t{ font-size:13.5px; flex:1; }
+  .vignette-step .x{ border:none; background:transparent; color:var(--text-muted); cursor:pointer; width:18px; height:18px; border-radius:50%; font-size:12px; flex:none; }
+  .vignette-step .x:hover{ background:rgba(0,0,0,0.08); color:var(--text); }
+  .vignette-add-step{ display:flex; gap:6px; }
+  .vignette-add-step input{ flex:1; font-size:12.5px; padding:6px 8px; }
+  .vignette-add-step .btn{ padding:6px 10px; font-size:12px; }
+  .add-card-box{ border:1px dashed var(--border); border-radius:10px; padding:10px 12px; }
+  .add-card-row{ display:flex; gap:8px; }
+
+  .intro{ margin-bottom:18px; }
+  .intro h1{ font-size:19px; }
+  .intro p{ font-size:13.5px; color:var(--text-muted); margin:6px 0 0; max-width:60ch; }
+
+  .popover-layer.modal-layer.open{ display:flex; align-items:center; justify-content:center; }
+  .modal-layer .popover{ position:relative; top:auto; left:auto; }
+
+  .theme-toggle{
+    position:fixed; z-index:55;
+    right:calc(12px + env(safe-area-inset-right)); bottom:calc(var(--ribbon-bot-h,68px) + 10px);
+    width:38px; height:38px; border-radius:50%; border:1px solid var(--border);
+    background:var(--surface); color:var(--text); cursor:pointer; font-size:15px;
+    box-shadow:var(--shadow);
+  }
+  .theme-toggle:hover{ background:var(--surface-2); }
+
+  @media (max-width:520px){
+    body{ font-size:14px; }
+    .ribbon-inner{ padding:6px 8px; gap:6px; }
+    .datetime{ min-width:auto; }
+    .datetime .time{ font-size:14px; }
+    .voyant-btn{ max-width:130px; padding:5px 10px 5px 7px; font-size:12px; }
+    .voyant-btn-need{ max-width:70vw; }
+    .pill-toggle{ padding:5px 9px; font-size:12px; gap:5px; }
+    .gauge-btn{ padding:4px 8px 4px 5px; gap:6px; }
+    .battery{ width:24px; height:12px; }
+    .gauge-label{ font-size:11px; }
+    .gauge-caption{ display:none; }
+    .note-link{ font-size:9.5px; max-width:110px; }
+    .timer-chip{ padding:4px 8px; }
+    .timer-chip .k{ font-size:8.5px; }
+    .timer-chip .v{ font-size:12px; }
+    .cluster{ gap:6px; }
+    .cluster-grow{ gap:6px; }
+    .tabbar-inner{ gap:2px; }
+    .tab-btn{ padding:9px 10px; font-size:12.5px; }
+    main{ padding-top:38px; }
+    .wrap{ padding-top:14px; padding-bottom:28px; }
+    .card{ padding:12px 14px; }
+    .theme-toggle{ width:34px; height:34px; font-size:13px; }
+  }
+
+  /* Thème "carré" — filet de sécurité : aucun bord arrondi nulle part,
+     y compris sur les éléments ajoutés dynamiquement en JS, quel que
+     soit le moteur de rendu. */
+  *, *::before, *::after{ border-radius:0 !important; }
+</style>
+</head>
+<body>
+
+<div id="app">
+  <div class="readonly-banner" id="readonly-banner">Vue en lecture seule — les modifications ne sont pas enregistrées ici.</div>
+
+  <header class="ribbon ribbon-top" id="ribbon-top">
+    <div class="ribbon-inner">
+      <div class="cluster datetime">
+        <span class="day mono" id="rt-day">—</span>
+        <span class="time mono" id="rt-time">—:—</span>
+      </div>
+      <div class="cluster cluster-grow">
+        <button type="button" class="pill-toggle" id="btn-verbal" aria-pressed="true"><span class="dot"></span><span id="verbal-label">Verbal</span></button>
+        <button type="button" class="pill-toggle" id="btn-masking" aria-pressed="true"><span class="dot"></span><span id="masking-label">Masking</span></button>
+        <button type="button" class="voyant-btn" id="btn-mood" title="État actuel — appuyer pour changer">
+          <span class="swatch-dot" id="mood-dot"></span>
+          <span class="voyant-label" id="mood-label">Neutre</span>
+        </button>
+      </div>
+      <div class="cluster">
+        <div class="gauge-block">
+          <button type="button" class="gauge-btn" id="btn-energy" title="Énergie — appuyer pour ajuster">
+            <span class="battery"><span class="battery-fill" id="energy-fill"></span></span>
+            <span>
+              <span class="gauge-label mono" id="energy-label">70%</span><br>
+              <span class="gauge-caption">Énergie</span>
+            </span>
+          </button>
+          <button type="button" class="note-link" id="btn-energy-note" title="Écrire un exemple concret de ce que ce niveau veut dire">Explication</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <nav class="tabbar" id="tabbar">
+    <div class="tabbar-inner" role="tablist" aria-label="Sections">
+      <button class="tab-btn" role="tab" data-tab="general" aria-selected="true">Général</button>
+      <button class="tab-btn" role="tab" data-tab="tsa" aria-selected="false">Neurodivergence</button>
+      <button class="tab-btn" role="tab" data-tab="tspt" aria-selected="false">CPTSD</button>
+      <button class="tab-btn" role="tab" data-tab="tdi" aria-selected="false">Dissociation</button>
+      <button class="tab-btn" role="tab" data-tab="divers" aria-selected="false">Divers</button>
+      <button class="tab-btn" role="tab" data-tab="protocols" aria-selected="false">Que faire si…</button>
+      <button class="tab-btn" role="tab" data-tab="topics" aria-selected="false">Sujets à aborder</button>
+      <button class="tab-btn" role="tab" data-tab="day" aria-selected="false">La journée ?</button>
+    </div>
+  </nav>
+
+  <main>
+    <div class="wrap">
+
+      <section class="panel active" data-panel="general" id="panel-general">
+        <div class="intro">
+          <h1>Vitaux d'abord</h1>
+          <p>À vérifier en priorité, avant tout le reste — cocher ce qui est fait pour savoir où on en est.</p>
+        </div>
+        <div class="card">
+          <div class="section-title">Besoins physiques</div>
+          <div class="needlist" id="list-physical"></div>
+          <div class="add-row" style="margin-top:10px;">
+            <input type="text" id="input-add-physical" placeholder="Un ou plusieurs besoins, séparés par une virgule…">
+            <button class="btn" id="btn-add-physical">Ajouter</button>
+          </div>
+
+          <div class="section-title">Besoins mentaux</div>
+          <div class="needlist" id="list-mental"></div>
+          <div class="add-row" style="margin-top:10px;">
+            <input type="text" id="input-add-mental" placeholder="Un ou plusieurs besoins, séparés par une virgule…">
+            <button class="btn" id="btn-add-mental">Ajouter</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel" data-panel="tsa" id="panel-tsa"></section>
+      <section class="panel" data-panel="tspt" id="panel-tspt"></section>
+      <section class="panel" data-panel="tdi" id="panel-tdi"></section>
+      <section class="panel" data-panel="divers" id="panel-divers"></section>
+      <section class="panel" data-panel="protocols" id="panel-protocols"></section>
+      <section class="panel" data-panel="topics" id="panel-topics"></section>
+      <section class="panel" data-panel="day" id="panel-day"></section>
+
+    </div>
+  </main>
+
+  <footer class="ribbon ribbon-bottom" id="ribbon-bottom">
+    <div class="ribbon-inner">
+      <button type="button" class="voyant-btn voyant-btn-need" id="btn-need" title="Besoin immédiat — appuyer pour changer (jusqu'à 3)">
+        <span class="need-list" id="need-list"></span>
+      </button>
+      <div class="cluster cluster-grow" style="align-items:flex-start;">
+        <button type="button" class="timer-chip" id="btn-timer" title="Depuis quand — approximatif">
+          <span class="k">Dans cet état depuis</span>
+          <span class="v mono" id="timer-label">Non renseigné</span>
+        </button>
+        <div class="gauge-block" style="align-items:flex-start;">
+          <button type="button" class="timer-chip" id="btn-nextvisit" title="Prochaine visite psy">
+            <span class="k">Prochaine visite psy</span>
+            <span class="v mono" id="nextvisit-label">Non prévue</span>
+          </button>
+          <button type="button" class="note-link" id="btn-emergency-open">Urgence &amp; contacts</button>
+        </div>
+      </div>
+      <div class="gauge-block">
+        <button type="button" class="gauge-btn" id="btn-availability" title="Disponibilité mentale — appuyer pour ajuster">
+          <span class="battery"><span class="battery-fill" id="availability-fill"></span></span>
+          <span>
+            <span class="gauge-label mono" id="availability-label">60%</span><br>
+            <span class="gauge-caption">Disponibilité</span>
+          </span>
+        </button>
+        <button type="button" class="note-link" id="btn-availability-note" title="Écrire un exemple concret de ce que ce niveau veut dire">Explication</button>
+      </div>
+    </div>
+    <div class="updated-note-row" id="updated-note-row">
+      <span class="updated-note" id="updated-note">—</span>
+      <button type="button" class="data-btn" id="btn-export" title="Télécharger toutes les données de l'app dans un fichier JSON">↓ Exporter</button>
+      <button type="button" class="data-btn" id="btn-import" title="Charger un fichier JSON exporté depuis cette app (remplace les données actuelles)">↑ Importer</button>
+      <input type="file" id="input-import" accept="application/json,.json" hidden>
+    </div>
+  </footer>
+
+  <button type="button" class="theme-toggle" id="btn-theme" title="Changer le thème" aria-label="Changer le thème clair/sombre">◐</button>
+
+  <!-- Popover layer (mood) -->
+  <div class="popover-layer" id="pop-mood">
+    <div class="popover-scrim" data-close="pop-mood"></div>
+    <div class="popover" id="pop-mood-box">
+      <h3>État actuel</h3>
+      <div class="chip-row" id="pop-mood-presets"></div>
+      <div class="swatch-row" id="pop-mood-swatches"></div>
+      <div class="field-row">
+        <input type="text" id="pop-mood-custom" placeholder="Ou décrire avec ses propres mots…">
+        <button class="btn btn-primary" id="pop-mood-set">Définir</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Popover layer (need) -->
+  <div class="popover-layer" id="pop-need">
+    <div class="popover-scrim" data-close="pop-need"></div>
+    <div class="popover" id="pop-need-box">
+      <h3>Besoin immédiat</h3>
+      <p class="hint" id="pop-need-hint">Jusqu'à 3 en même temps.</p>
+      <div class="taglist" id="pop-need-active"></div>
+      <div class="chip-row" id="pop-need-presets"></div>
+      <div class="swatch-row" id="pop-need-swatches"></div>
+      <div class="field-row">
+        <input type="text" id="pop-need-custom" placeholder="Ou décrire avec ses propres mots…">
+        <button class="btn btn-primary" id="pop-need-set">Ajouter</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Popover layer (energy slider) -->
+  <div class="popover-layer" id="pop-energy">
+    <div class="popover-scrim" data-close="pop-energy"></div>
+    <div class="popover" id="pop-energy-box">
+      <h3>Énergie disponible</h3>
+      <p class="hint">Estimation ressentie, pas une mesure exacte.</p>
+      <input type="range" id="pop-energy-range" min="0" max="100" step="5">
+      <div class="popover-actions"><span class="mono" id="pop-energy-value" style="margin-right:auto;font-weight:700;"></span></div>
+    </div>
+  </div>
+
+  <!-- Popover layer (availability slider) -->
+  <div class="popover-layer" id="pop-availability">
+    <div class="popover-scrim" data-close="pop-availability"></div>
+    <div class="popover" id="pop-availability-box">
+      <h3>Disponibilité mentale</h3>
+      <p class="hint">Ce qu'on est en capacité de faire là, maintenant.</p>
+      <input type="range" id="pop-availability-range" min="0" max="100" step="5">
+      <div class="popover-actions"><span class="mono" id="pop-availability-value" style="margin-right:auto;font-weight:700;"></span></div>
+    </div>
+  </div>
+
+  <!-- Popover layer (energy note) -->
+  <div class="popover-layer" id="pop-energy-note">
+    <div class="popover-scrim" data-close="pop-energy-note"></div>
+    <div class="popover" id="pop-energy-note-box">
+      <h3>Explication — énergie</h3>
+      <p class="hint">Un exemple concret de ce que ce niveau veut dire, pour toi.</p>
+      <textarea id="pop-energy-note-text" rows="4"></textarea>
+      <div class="popover-actions" style="justify-content:space-between;">
+        <button class="btn-quiet" id="pop-energy-note-clear">Effacer</button>
+        <button class="btn btn-primary" id="pop-energy-note-set">Valider</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Popover layer (availability note) -->
+  <div class="popover-layer" id="pop-availability-note">
+    <div class="popover-scrim" data-close="pop-availability-note"></div>
+    <div class="popover" id="pop-availability-note-box">
+      <h3>Explication — disponibilité mentale</h3>
+      <p class="hint">Un exemple concret de ce que ce niveau veut dire, pour toi.</p>
+      <textarea id="pop-availability-note-text" rows="4"></textarea>
+      <div class="popover-actions" style="justify-content:space-between;">
+        <button class="btn-quiet" id="pop-availability-note-clear">Effacer</button>
+        <button class="btn btn-primary" id="pop-availability-note-set">Valider</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Popover layer (timer) -->
+  <div class="popover-layer" id="pop-timer">
+    <div class="popover-scrim" data-close="pop-timer"></div>
+    <div class="popover" id="pop-timer-box">
+      <h3>Depuis quand dans cet état ?</h3>
+      <p class="hint">Sert seulement de repère approximatif — pas un chronomètre.</p>
+      <div class="field-row" style="margin-bottom:8px;">
+        <input type="date" id="pop-timer-date">
+        <input type="time" id="pop-timer-time">
+      </div>
+      <div class="popover-actions" style="justify-content:space-between;">
+        <button class="btn-quiet" id="pop-timer-clear">Effacer</button>
+        <div style="display:flex; gap:8px;">
+          <button class="btn" id="pop-timer-now">Maintenant</button>
+          <button class="btn btn-primary" id="pop-timer-set">Valider</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Popover layer (next visit) -->
+  <div class="popover-layer" id="pop-nextvisit">
+    <div class="popover-scrim" data-close="pop-nextvisit"></div>
+    <div class="popover" id="pop-nextvisit-box">
+      <h3>Prochaine visite psy</h3>
+      <div class="field-row" style="margin-bottom:8px;">
+        <input type="date" id="pop-nextvisit-date">
+        <input type="time" id="pop-nextvisit-time">
+      </div>
+      <div class="popover-actions" style="justify-content:space-between;">
+        <button class="btn-quiet" id="pop-nextvisit-clear">Effacer</button>
+        <button class="btn btn-primary" id="pop-nextvisit-set">Valider</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Popover layer (emergency contacts) — fenêtre centrée, pas ancrée -->
+  <div class="popover-layer modal-layer" id="pop-emergency">
+    <div class="popover-scrim" data-close="pop-emergency"></div>
+    <div class="popover" id="pop-emergency-box">
+      <h3>Urgence &amp; contacts</h3>
+      <p class="hint">Les numéros à contacter, et qui suit la personne en ce moment.</p>
+
+      <div class="field-label" style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
+        <span>Numéros d'urgence</span>
+        <button type="button" class="restore-link" id="pop-emergency-restore">↺ Restaurer les numéros par défaut</button>
+      </div>
+      <div id="pop-emergency-numbers"></div>
+      <div class="field-row" style="margin-bottom:6px;">
+        <input type="text" id="pop-emergency-number-label" placeholder="Nom (ex. SOS Amitié)">
+        <input type="text" id="pop-emergency-number-value" placeholder="Numéro">
+      </div>
+      <button type="button" class="btn" id="pop-emergency-number-add" style="width:100%;">Ajouter ce numéro</button>
+
+      <div class="field-label">Psychiatre qui suit</div>
+      <input type="text" id="pop-emergency-psy" placeholder="Nom du psychiatre…">
+
+      <div class="field-label">Psychologue (si applicable)</div>
+      <input type="text" id="pop-emergency-psychologue" placeholder="Nom du psychologue…">
+
+      <div class="popover-actions">
+        <button class="btn btn-primary" id="pop-emergency-close">Fermer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Popover layer (topic edit) -->
+  <div class="popover-layer" id="pop-topic">
+    <div class="popover-scrim" data-close="pop-topic"></div>
+    <div class="popover topic-popover-box" id="pop-topic-box">
+      <h3 id="pop-topic-title">Sujet</h3>
+
+      <div class="field-label">Sous-sujets</div>
+      <div id="pop-topic-subtopics"></div>
+      <div class="add-row">
+        <input type="text" id="pop-topic-subtopic-input" placeholder="Ajouter un sous-sujet…">
+        <button class="btn" id="pop-topic-subtopic-add">Ajouter</button>
+      </div>
+
+      <div class="field-label">Explication</div>
+      <textarea id="pop-topic-explanation" rows="3" placeholder="Ce qu'il y a à dire, en détail…"></textarea>
+
+      <div class="field-label">Notes (questions, retours reçus…)</div>
+      <textarea id="pop-topic-notes" rows="3" placeholder="Si quelqu'un pose une question ou donne un retour…"></textarea>
+
+      <div class="popover-actions" style="justify-content:space-between;">
+        <button class="btn-quiet" id="pop-topic-delete">Supprimer le sujet</button>
+        <button class="btn btn-primary" id="pop-topic-close">Fermer</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script id="app-state" type="application/json">{"v": 1, "ribbon": {"verbal": true, "masking": true, "energy": 60, "mood": {"label": "Fatigué", "swatch": "rest"}}, "footer": {"need": {"label": "Contact physique rassurant", "swatch": "calm"}, "availability": 10, "since": {"timestamp": 1788040800000}, "nextVisit": {"timestamp": 1790187300000}}, "general": {"physical": [{"id": "n_ix1r60r", "label": "Boire de l'eau", "checked": false, "custom": false}, {"id": "n_a8c6ib8", "label": "Manger quelque chose", "checked": false, "custom": false}, {"id": "n_j65n6gl", "label": "Aller aux toilettes", "checked": false, "custom": false}, {"id": "n_r47a93z", "label": "Prendre le traitement prévu", "checked": false, "custom": false}, {"id": "n_u2pyqpc", "label": "Dormir un minimum / se reposer", "checked": false, "custom": false}, {"id": "n_du0wl7a", "label": "Bouger le corps un peu", "checked": false, "custom": false}, {"id": "n_38yznz1", "label": "Sortir / lumière du jour", "checked": false, "custom": false}, {"id": "n_bz8g9te", "label": "Température corporelle correcte", "checked": false, "custom": false}, {"id": "n_6vorgts", "label": "Hygiène de base faite", "checked": false, "custom": false}], "mental": [{"id": "n_o38tftk", "label": "Moment sans stimulation", "checked": false, "custom": false}, {"id": "n_iaxsmcb", "label": "Sentiment de sécurité", "checked": false, "custom": false}, {"id": "n_955w2gg", "label": "Pas d'obligation de « performer »", "checked": false, "custom": false}, {"id": "n_mp8sm3f", "label": "Espace pour exprimer ce qui se passe", "checked": false, "custom": false}, {"id": "n_lewr47i", "label": "Temps de transition avant/après un effort", "checked": false, "custom": false}, {"id": "n_hdr2dze", "label": "Contact social choisi (si besoin)", "checked": false, "custom": false}]}, "diagnoses": {"tsa": {"title": "Neurodivergence (TSA / TDA)", "tags": [{"id": "t_rzv2um2", "label": "Surcharge sensorielle", "active": false, "custom": false}, {"id": "t_kxtfi6i", "label": "Besoin de silence", "active": false, "custom": false}, {"id": "t_7ika7h8", "label": "Besoin de bouger", "active": false, "custom": false}, {"id": "t_40bhftp", "label": "Difficulté à changer de tâche", "active": false, "custom": false}, {"id": "t_59wabn3", "label": "Hyperfocus", "active": false, "custom": false}, {"id": "t_sbxalq5", "label": "Fatigue sociale", "active": false, "custom": false}, {"id": "t_8mqwjqj", "label": "Besoin de routine", "active": false, "custom": false}, {"id": "t_71fjt1c", "label": "Difficulté avec l'imprévu", "active": false, "custom": false}, {"id": "t_1w5m5me", "label": "Sensibilité au bruit", "active": false, "custom": false}, {"id": "t_w8lrao8", "label": "Sensibilité à la lumière", "active": false, "custom": false}, {"id": "t_jezbmuu", "label": "Besoin de stimming", "active": false, "custom": false}, {"id": "t_ke5gj6z", "label": "Saturation du contact visuel", "active": false, "custom": false}, {"id": "t_vdx48nr", "label": "Difficulté à parler à l'oral", "active": false, "custom": false}, {"id": "t_5p4r2s1", "label": "Besoin de solitude", "active": false, "custom": false}, {"id": "t_bot6or6", "label": "Oubli des besoins de base", "active": false, "custom": false}, {"id": "t_fvayxox", "label": "Impulsivité", "active": false, "custom": false}, {"id": "t_3imav7y", "label": "Paralysie de tâche", "active": false, "custom": false}, {"id": "t_hd3uln8", "label": "Hypersensibilité émotionnelle", "active": false, "custom": false}, {"id": "t_frfjuf4", "label": "Besoin d'écrit plutôt que d'oral", "active": false, "custom": false}], "auto": [{"id": "r_esb1kl0", "label": "Réduire la lumière", "state": null, "custom": false}, {"id": "r_rdbkbpv", "label": "Casque anti-bruit / bouchons", "state": null, "custom": false}, {"id": "r_9m9e5ha", "label": "Objet à manipuler (fidget)", "state": null, "custom": false}, {"id": "r_k9dxjqa", "label": "Pause seul au calme", "state": null, "custom": false}, {"id": "r_evlvw1f", "label": "Retirer un vêtement inconfortable", "state": null, "custom": false}, {"id": "r_0wvz43u", "label": "Boire de l'eau", "state": null, "custom": false}, {"id": "r_4e5hh75", "label": "Manger simple", "state": null, "custom": false}, {"id": "r_miy9323", "label": "Minuteur de transition", "state": null, "custom": false}, {"id": "r_s4hgf7k", "label": "Liste écrite des étapes", "state": null, "custom": false}, {"id": "r_8pq1g59", "label": "Revenir à une routine connue", "state": null, "custom": false}, {"id": "r_v5bne12", "label": "Mouvement physique (marcher, se balancer)", "state": null, "custom": false}, {"id": "r_zrkxo0t", "label": "Limiter les stimuli visuels", "state": null, "custom": false}], "partner": [{"id": "r_476sler", "label": "Environnement calme, sans sollicitation", "state": null, "custom": false}, {"id": "r_j7ucydt", "label": "Gérer les interactions extérieures à ma place", "state": null, "custom": false}, {"id": "r_qeaarsi", "label": "Contact physique doux (si utile)", "state": null, "custom": false}, {"id": "r_9neeldc", "label": "Aide pour verbaliser un besoin", "state": null, "custom": false}, {"id": "r_ig88xma", "label": "Baisser le volume / la lumière ambiante", "state": null, "custom": false}, {"id": "r_k3mjvrv", "label": "Patience sur le temps de réponse", "state": null, "custom": false}, {"id": "r_jc571rr", "label": "Accepter un besoin de solitude sans le prendre personnellement", "state": null, "custom": false}, {"id": "r_grofien", "label": "Aide pour une tâche exécutive", "state": null, "custom": false}]}, "tspt": {"title": "CPTSD (stress post-traumatique complexe)", "tags": [{"id": "t_uwx7s1x", "label": "Hypervigilance", "active": false, "custom": false}, {"id": "t_bd0z9b9", "label": "Flashback", "active": false, "custom": false}, {"id": "t_7pdowip", "label": "Dissociation légère", "active": false, "custom": false}, {"id": "t_llmru1i", "label": "Évitement", "active": false, "custom": false}, {"id": "t_dwen241", "label": "Sursaut / alarme émotionnelle", "active": false, "custom": false}, {"id": "t_lm2qwc6", "label": "Sentiment de danger diffus", "active": false, "custom": false}, {"id": "t_l3tatdd", "label": "Autocritique intense", "active": false, "custom": false}, {"id": "t_nll6020", "label": "Difficulté à faire confiance", "active": false, "custom": false}, {"id": "t_7msiaja", "label": "Besoin de réassurance", "active": false, "custom": false}, {"id": "t_4k24x9s", "label": "Isolement", "active": false, "custom": false}, {"id": "t_7lvo759", "label": "Sommeil perturbé", "active": false, "custom": false}, {"id": "t_bxe2qbh", "label": "Tension corporelle", "active": false, "custom": false}, {"id": "t_2e2l2ks", "label": "Colère soudaine", "active": false, "custom": false}, {"id": "t_g93qx2b", "label": "Honte", "active": false, "custom": false}, {"id": "t_andbkw2", "label": "Sentiment d'abandon", "active": false, "custom": false}, {"id": "t_z4a8f3n", "label": "Besoin de contrôle sur l'environnement", "active": false, "custom": false}, {"id": "t_mrdewyl", "label": "Réponse de figement", "active": false, "custom": false}], "auto": [{"id": "r_ufz4bxh", "label": "Ancrage 5-4-3-2-1", "state": null, "custom": false}, {"id": "r_u22pkqc", "label": "Respiration lente", "state": null, "custom": false}, {"id": "r_t2u5k1h", "label": "Objet réconfortant en main", "state": null, "custom": false}, {"id": "r_k5h85r1", "label": "Eau fraîche", "state": null, "custom": false}, {"id": "r_kel6mmp", "label": "Se rappeler la date et le lieu", "state": null, "custom": false}, {"id": "r_gonp3q0", "label": "Écrire ce qui se passe", "state": null, "custom": false}, {"id": "r_efyyydv", "label": "Couverture ou poids sur le corps", "state": null, "custom": false}, {"id": "r_lng6mg9", "label": "S'éloigner de la source de stress", "state": null, "custom": false}, {"id": "r_mdk786l", "label": "Musique connue et apaisante", "state": null, "custom": false}, {"id": "r_brus1pu", "label": "Étirement doux", "state": null, "custom": false}], "partner": [{"id": "r_ds8elbl", "label": "Présence silencieuse", "state": null, "custom": false}, {"id": "r_se74n7t", "label": "Rappel du lieu et du temps présent", "state": null, "custom": false}, {"id": "r_v3wb3sz", "label": "Contact physique si consenti à l'avance", "state": null, "custom": false}, {"id": "r_8l4g342", "label": "Ne pas toucher sans prévenir", "state": null, "custom": false}, {"id": "r_778mg6z", "label": "Parler doucement, ton bas", "state": null, "custom": false}, {"id": "r_kzbiy3u", "label": "Ne pas poser de questions tout de suite", "state": null, "custom": false}, {"id": "r_lqupabt", "label": "Aide pour sortir du lieu", "state": null, "custom": false}]}, "tdi": {"title": "Dissociation (TDI)", "tags": [{"id": "t_jzzak3v", "label": "Dépersonnalisation", "active": false, "custom": false}, {"id": "t_a72iqnb", "label": "Déréalisation", "active": false, "custom": false}, {"id": "t_e25q7il", "label": "Perte de temps / trou de mémoire", "active": false, "custom": false}, {"id": "t_ux1c7ha", "label": "Changement ressenti du « moi »", "active": false, "custom": false}, {"id": "t_upk8ek7", "label": "Dialogue interne", "active": false, "custom": false}, {"id": "t_1sxbd3t", "label": "Confusion sur qui est présent", "active": false, "custom": false}, {"id": "t_qvbbu3z", "label": "Difficulté à reconnaître son reflet", "active": false, "custom": false}, {"id": "t_d9kg51y", "label": "Sensation de flottement", "active": false, "custom": false}, {"id": "t_skmxsxf", "label": "Brouillard mental", "active": false, "custom": false}, {"id": "t_rp0gdp2", "label": "Difficulté d'accès aux souvenirs", "active": false, "custom": false}, {"id": "t_jtglrye", "label": "Sentiment d'observer de l'extérieur", "active": false, "custom": false}, {"id": "t_jt70cml", "label": "Changement de ton ou de posture", "active": false, "custom": false}], "auto": [{"id": "r_fimlujr", "label": "Ancrage sensoriel (texture, odeur familière)", "state": null, "custom": false}, {"id": "r_ojgne6k", "label": "Dire son prénom et la date", "state": null, "custom": false}, {"id": "r_f0r82n3", "label": "Nommer 5 objets autour de soi", "state": null, "custom": false}, {"id": "r_g9gz1g1", "label": "Boisson fraîche", "state": null, "custom": false}, {"id": "r_v06qkt9", "label": "Mouvement pour se « rebrancher » au corps", "state": null, "custom": false}, {"id": "r_ql207yd", "label": "Objet repère toujours sur soi", "state": null, "custom": false}, {"id": "r_6wg3z5g", "label": "Noter l'heure de début", "state": null, "custom": false}], "partner": [{"id": "r_xyv676x", "label": "Dire calmement qui parle et où l'on est", "state": null, "custom": false}, {"id": "r_qmokcsc", "label": "Ne pas tester la mémoire", "state": null, "custom": false}, {"id": "r_5goiirs", "label": "Voix douce et familière", "state": null, "custom": false}, {"id": "r_cw1pb17", "label": "Rester présent sans geste brusque", "state": null, "custom": false}, {"id": "r_fsz9jw7", "label": "Éviter « tu ne te souviens pas ? »", "state": null, "custom": false}, {"id": "r_zfn099u", "label": "Rituel connu de retour (musique, geste)", "state": null, "custom": false}]}, "genre": {"title": "Dysphorie de genre", "tags": [{"id": "t_6dgp1s4", "label": "Malaise face au miroir", "active": false, "custom": false}, {"id": "t_2o0m6g6", "label": "Inconfort avec la voix", "active": false, "custom": false}, {"id": "t_ip6phpi", "label": "Inconfort avec le corps", "active": false, "custom": false}, {"id": "t_c7ijrmt", "label": "Envie de vêtements différents", "active": false, "custom": false}, {"id": "t_g93l36c", "label": "Fatigue du regard des autres", "active": false, "custom": false}, {"id": "t_pah4dti", "label": "Besoin d'être perçu correctement", "active": false, "custom": false}, {"id": "t_ha9kic1", "label": "Euphorie de genre (positif)", "active": false, "custom": false}, {"id": "t_do22cdx", "label": "Anxiété sociale liée au genre", "active": false, "custom": false}, {"id": "t_jab6lfe", "label": "Mégenrage récent", "active": false, "custom": false}, {"id": "t_2wt7jr6", "label": "Besoin de changer d'apparence aujourd'hui", "active": false, "custom": false}], "auto": [{"id": "r_23v4enh", "label": "Changer de vêtements", "state": null, "custom": false}, {"id": "r_4w0xhnq", "label": "Binder / packer si besoin et si sûr", "state": null, "custom": false}, {"id": "r_ri6paks", "label": "Voix : exercice ou pause vocale", "state": null, "custom": false}, {"id": "r_on34oac", "label": "Regarder du contenu qui aide (positif)", "state": null, "custom": false}, {"id": "r_zvyk6th", "label": "Éviter le miroir un moment", "state": null, "custom": false}, {"id": "r_c5lslkg", "label": "Se rappeler que le ressenti est valide", "state": null, "custom": false}, {"id": "r_swt3xhc", "label": "Objet ou vêtement qui aide, à portée de main", "state": null, "custom": false}], "partner": [{"id": "r_nrzfvmh", "label": "Utiliser le prénom et les accords justes", "state": null, "custom": false}, {"id": "r_lkdwvlt", "label": "Ne pas relever un mégenrage accidentel sur le moment", "state": null, "custom": false}, {"id": "r_mjhshee", "label": "Complimenter sans commenter le corps", "state": null, "custom": false}, {"id": "r_ysuevom", "label": "Proposer de sortir faire les magasins si besoin", "state": null, "custom": false}, {"id": "r_ufkmk7e", "label": "Rassurer sans minimiser le ressenti", "state": null, "custom": false}]}, "dereal": {"title": "Déréalisation", "tags": [{"id": "t_6xltz7p", "label": "Monde qui semble irréel", "active": false, "custom": false}, {"id": "t_2habr07", "label": "Sensation de rêve éveillé", "active": false, "custom": false}, {"id": "t_0t3q9qz", "label": "Distance avec l'environnement", "active": false, "custom": false}, {"id": "t_rgb3q75", "label": "Sons ou lumières qui semblent étranges", "active": false, "custom": false}, {"id": "t_msloocp", "label": "Impression de décor en carton", "active": false, "custom": false}, {"id": "t_fukrwwc", "label": "Difficulté à se sentir concerné", "active": false, "custom": false}, {"id": "t_o5eqzar", "label": "Temps qui semble ralenti ou accéléré", "active": false, "custom": false}], "auto": [{"id": "r_4bfes4v", "label": "Toucher des textures différentes", "state": null, "custom": false}, {"id": "r_rix2uh0", "label": "Nommer à voix haute ce qu'on voit", "state": null, "custom": false}, {"id": "r_ptcmxzt", "label": "Sortir prendre l'air", "state": null, "custom": false}, {"id": "r_x9vv0gg", "label": "Eau froide sur les mains ou le visage", "state": null, "custom": false}, {"id": "r_rptk1eg", "label": "Marcher pieds nus si possible", "state": null, "custom": false}, {"id": "r_6uxe9v5", "label": "Se concentrer sur un son précis", "state": null, "custom": false}], "partner": [{"id": "r_y6f5m0u", "label": "Décrire calmement l'environnement", "state": null, "custom": false}, {"id": "r_f37h9to", "label": "Proposer un appui physique (main, épaule)", "state": null, "custom": false}, {"id": "r_tyw2lm2", "label": "Parler d'une voix stable et posée", "state": null, "custom": false}, {"id": "r_obre0wo", "label": "Éviter de dramatiser ou de tester la perception", "state": null, "custom": false}, {"id": "r_jy7c0q1", "label": "Rester présent sans forcer l'interaction", "state": null, "custom": false}]}, "hallu": {"title": "Hallucinations", "tags": [{"id": "t_dofc6e3", "label": "Perception auditive inhabituelle", "active": false, "custom": false}, {"id": "t_tizbtff", "label": "Perception visuelle inhabituelle", "active": false, "custom": false}, {"id": "t_1m1mv6f", "label": "Sensation de présence", "active": false, "custom": false}, {"id": "t_4aph766", "label": "Difficulté à distinguer réel / pas réel", "active": false, "custom": false}, {"id": "t_5u8awls", "label": "Fatigue ou stress élevé associé", "active": false, "custom": false}, {"id": "t_bp5iq89", "label": "Besoin de vérifier avec quelqu'un", "active": false, "custom": false}], "auto": [{"id": "r_6m3t8rd", "label": "Noter ce qui est perçu, sans jugement", "state": null, "custom": false}, {"id": "r_edhx2nd", "label": "Vérifier avec un repère factuel (heure, lieu)", "state": null, "custom": false}, {"id": "r_60dgzny", "label": "Réduire les stimuli (lumière, bruit)", "state": null, "custom": false}, {"id": "r_8auwktm", "label": "Se reposer si possible", "state": null, "custom": false}, {"id": "r_h246f9i", "label": "Contacter un professionnel si besoin", "state": null, "custom": false}], "partner": [{"id": "r_kn05ksw", "label": "Demander calmement ce qui est perçu", "state": null, "custom": false}, {"id": "r_uqm41gb", "label": "Ne pas se moquer ni dramatiser", "state": null, "custom": false}, {"id": "r_qliob53", "label": "Aider à vérifier la réalité factuelle avec douceur", "state": null, "custom": false}, {"id": "r_1eaugiu", "label": "Proposer de contacter un professionnel si ça persiste", "state": null, "custom": false}, {"id": "r_wudv78k", "label": "Rester présent et posé", "state": null, "custom": false}]}}, "lastUpdated": 1788291660470, "topics": [], "day": {"worst": {"tsa": false, "tspt": false, "tdi": false}, "weighing": []}, "protocols": {"tsa": [{"id": "pc_j21im2q", "title": "Si surcharge sensorielle", "steps": [{"id": "ps_8mqm1ae", "text": "Baisser la lumière et le bruit ambiant si possible"}, {"id": "ps_o16qh2h", "text": "Proposer de retirer un vêtement inconfortable ou de mettre le casque anti-bruit"}, {"id": "ps_gi26rwq", "text": "Ne pas forcer la parole — un simple signe suffit"}, {"id": "ps_s3cunqs", "text": "Laisser de l'espace, rester disponible sans intervenir sauf si demandé"}]}, {"id": "pc_nzpvjva", "title": "Si blocage / paralysie de tâche", "steps": [{"id": "ps_1lt6o2o", "text": "Ne pas presser ni culpabiliser"}, {"id": "ps_adwns5h", "text": "Proposer une seule étape très concrète à la fois"}, {"id": "ps_d0n9p7r", "text": "Offrir de faire la tâche avec, pas à sa place"}, {"id": "ps_d0v6y1t", "text": "Accepter que ça prenne le temps qu'il faut"}]}], "tspt": [{"id": "pc_c7pu93b", "title": "Si flashback", "steps": [{"id": "ps_ymnn3j3", "text": "Parler doucement, d'une voix posée"}, {"id": "ps_1l6jy2u", "text": "Rappeler calmement le lieu et l'année présente"}, {"id": "ps_y0cmidr", "text": "Ne pas toucher sans prévenir"}, {"id": "ps_phsctxi", "text": "Proposer un point d'ancrage (objet, respiration) sans insister"}, {"id": "ps_hhxmrol", "text": "Rester présent jusqu'au retour du contact avec le présent"}]}, {"id": "pc_e8ktthh", "title": "Si figement (freeze)", "steps": [{"id": "ps_0zkabzj", "text": "Ne pas bouger brusquement ni élever la voix"}, {"id": "ps_h8ackxm", "text": "Nommer doucement ce qui se passe autour"}, {"id": "ps_pdt84w6", "text": "Proposer un contact physique seulement si accepté à l'avance"}, {"id": "ps_octh3j4", "text": "Attendre — le figement se lève à son rythme"}]}], "tdi": [{"id": "pc_1qor8q2", "title": "Si dissociation forte / perte de repère", "steps": [{"id": "ps_9tsdu75", "text": "Dire calmement qui parle et où l'on est"}, {"id": "ps_5lmbx2k", "text": "Ne pas tester la mémoire ni poser de questions pièges"}, {"id": "ps_e4h0hdt", "text": "Utiliser une voix douce et familière"}, {"id": "ps_1mor9w4", "text": "Proposer un ancrage sensoriel (objet, texture, boisson fraîche)"}, {"id": "ps_td1pnae", "text": "Rester présent sans geste brusque"}]}, {"id": "pc_6he3ewn", "title": "Si confusion sur l'identité du moment", "steps": [{"id": "ps_pqbulxb", "text": "Ne pas insister pour savoir « qui » est là"}, {"id": "ps_sn8kioy", "text": "Parler simplement, sans complexité inutile"}, {"id": "ps_5sznb3k", "text": "Noter l'heure et ce qui se passe, pour plus tard"}, {"id": "ps_h9yph7w", "text": "Attendre que le contact se stabilise avant toute décision importante"}]}], "divers": [{"id": "pc_egfrfol", "title": "Si dysphorie de genre aiguë", "steps": [{"id": "ps_lrfdkzs", "text": "Utiliser le prénom et les accords justes sans qu'il faille le redemander"}, {"id": "ps_nhlwmtj", "text": "Ne pas commenter le corps ou l'apparence"}, {"id": "ps_np60ghb", "text": "Proposer une solution concrète si un vêtement ou un miroir pose problème"}, {"id": "ps_8irsg26", "text": "Rassurer sans minimiser"}]}, {"id": "pc_9oh5uzx", "title": "Si hallucination ou perception inhabituelle", "steps": [{"id": "ps_vueqtcy", "text": "Demander calmement ce qui est perçu, sans jugement"}, {"id": "ps_ijwh8vr", "text": "Ne pas se moquer ni dramatiser"}, {"id": "ps_8recove", "text": "Aider à vérifier la réalité factuelle avec douceur (heure, lieu)"}, {"id": "ps_ggqywum", "text": "Proposer de contacter un professionnel si ça persiste ou inquiète"}]}]}}</script>
+<script id="app-logic">
+(function(){
+  "use strict";
+
+  /* ---------------- utils ---------------- */
+  function uid(p){ return p + Math.random().toString(36).slice(2,9); }
+  function h(tag, attrs, children){
+    attrs = attrs || {}; children = children || [];
+    var e = document.createElement(tag);
+    Object.keys(attrs).forEach(function(k){
+      var v = attrs[k];
+      if (v === undefined || v === null || v === false) return;
+      if (k === "class") e.className = v;
+      else if (k === "text") e.textContent = v;
+      else if (k.indexOf("on") === 0 && typeof v === "function") e.addEventListener(k.slice(2), v);
+      else if (v === true) e.setAttribute(k, "");
+      else e.setAttribute(k, v);
+    });
+    children.forEach(function(c){
+      if (c === null || c === undefined) return;
+      e.appendChild(typeof c === "string" ? document.createTextNode(c) : c);
+    });
+    return e;
+  }
+  function clamp(n, lo, hi){ return Math.max(lo, Math.min(hi, n)); }
+  /* Couleur de jauge adaptative : rouge (0%) -> orange/jaune (~50%) -> vert (100%),
+     via une interpolation de teinte HSL de 0° à 120°. */
+  function gaugeColor(pct){
+    var hue = (clamp(pct, 0, 100) / 100) * 120;
+    return "hsl(" + hue.toFixed(0) + ", 72%, 42%)";
+  }
+  function applyGaugeColor(btnId, pct){
+    var btn = document.getElementById(btnId);
+    var color = gaugeColor(pct);
+    btn.style.background = color;
+    btn.style.borderColor = color;
+    btn.classList.add("gauge-colored");
+  }
+  function parseMultiValues(raw){
+    return raw.split(/[,;\n]+/).map(function(s){ return s.trim(); }).filter(function(s){ return s.length > 0; });
+  }
+  function clearNode(el){ while (el.firstChild) el.removeChild(el.firstChild); }
+  function pad2(n){ return String(n).padStart(2, "0"); }
+  function truncate(str, n){ str = str || ""; return str.length > n ? str.slice(0, n).trim() + "…" : str; }
+  function promptEdit(currentValue, title){
+    var v = window.prompt(title || "Modifier :", currentValue || "");
+    if (v === null) return null;
+    v = v.trim();
+    return v ? v : null;
+  }
+  function todayKey(d){
+    d = d || new Date();
+    return d.getFullYear() + "-" + pad2(d.getMonth()+1) + "-" + pad2(d.getDate());
+  }
+
+  var SWATCHES = ["neutral","calm","attention","urgent","rest","energy"];
+  var SWATCH_NAMES = {
+    neutral: "Neutre", calm: "Calme", attention: "Attention",
+    urgent: "Urgent", rest: "Repos", energy: "Énergie"
+  };
+  function swatchVar(key){ return "var(--sw-" + (key || "neutral") + ")"; }
+
+  /* ---------------- default content ---------------- */
+  function tag(label){ return { id: uid("t_"), label: label, active: false, custom: false }; }
+  function reg(label){ return { id: uid("r_"), label: label, state: null, custom: false }; }
+  function need(label){ return { id: uid("n_"), label: label, checked: false, custom: false }; }
+  function subtopic(label){ return { id: uid("sb_"), label: label }; }
+  function topicItem(label){
+    return {
+      id: uid("tp_"), label: label,
+      subtopics: [], explanation: "", notes: "",
+      tags: { abordee: false, comprise: false, revenir: false }
+    };
+  }
+  function weighItem(label){ return { id: uid("w_"), label: label }; }
+  function protoStep(text){ return { id: uid("ps_"), text: text }; }
+  function protoCard(title, steps){ return { id: uid("pc_"), title: title, steps: steps.map(protoStep) }; }
+
+  var TSA_TAGS = ["Surcharge sensorielle","Besoin de silence","Besoin de bouger","Difficulté à changer de tâche","Hyperfocus","Fatigue sociale","Besoin de routine","Difficulté avec l'imprévu","Sensibilité au bruit","Sensibilité à la lumière","Besoin de stimming","Saturation du contact visuel","Difficulté à parler à l'oral","Besoin de solitude","Oubli des besoins de base","Impulsivité","Paralysie de tâche","Hypersensibilité émotionnelle","Besoin d'écrit plutôt que d'oral"];
+  var TSA_AUTO = ["Réduire la lumière","Casque anti-bruit / bouchons","Objet à manipuler (fidget)","Pause seul au calme","Retirer un vêtement inconfortable","Boire de l'eau","Manger simple","Minuteur de transition","Liste écrite des étapes","Revenir à une routine connue","Mouvement physique (marcher, se balancer)","Limiter les stimuli visuels"];
+  var TSA_PARTNER = ["Environnement calme, sans sollicitation","Gérer les interactions extérieures à ma place","Contact physique doux (si utile)","Aide pour verbaliser un besoin","Baisser le volume / la lumière ambiante","Patience sur le temps de réponse","Accepter un besoin de solitude sans le prendre personnellement","Aide pour une tâche exécutive"];
+
+  var TSPT_TAGS = ["Hypervigilance","Flashback","Dissociation légère","Évitement","Sursaut / alarme émotionnelle","Sentiment de danger diffus","Autocritique intense","Difficulté à faire confiance","Besoin de réassurance","Isolement","Sommeil perturbé","Tension corporelle","Colère soudaine","Honte","Sentiment d'abandon","Besoin de contrôle sur l'environnement","Réponse de figement"];
+  var TSPT_AUTO = ["Ancrage 5-4-3-2-1","Respiration lente","Objet réconfortant en main","Eau fraîche","Se rappeler la date et le lieu","Écrire ce qui se passe","Couverture ou poids sur le corps","S'éloigner de la source de stress","Musique connue et apaisante","Étirement doux"];
+  var TSPT_PARTNER = ["Présence silencieuse","Rappel du lieu et du temps présent","Contact physique si consenti à l'avance","Ne pas toucher sans prévenir","Parler doucement, ton bas","Ne pas poser de questions tout de suite","Aide pour sortir du lieu"];
+
+  var TDI_TAGS = ["Dépersonnalisation","Déréalisation","Perte de temps / trou de mémoire","Changement ressenti du « moi »","Dialogue interne","Confusion sur qui est présent","Difficulté à reconnaître son reflet","Sensation de flottement","Brouillard mental","Difficulté d'accès aux souvenirs","Sentiment d'observer de l'extérieur","Changement de ton ou de posture"];
+  var TDI_AUTO = ["Ancrage sensoriel (texture, odeur familière)","Dire son prénom et la date","Nommer 5 objets autour de soi","Boisson fraîche","Mouvement pour se « rebrancher » au corps","Objet repère toujours sur soi","Noter l'heure de début"];
+  var TDI_PARTNER = ["Dire calmement qui parle et où l'on est","Ne pas tester la mémoire","Voix douce et familière","Rester présent sans geste brusque","Éviter « tu ne te souviens pas ? »","Rituel connu de retour (musique, geste)"];
+
+  var GENRE_TAGS = ["Malaise face au miroir","Inconfort avec la voix","Inconfort avec le corps","Envie de vêtements différents","Fatigue du regard des autres","Besoin d'être perçu correctement","Euphorie de genre (positif)","Anxiété sociale liée au genre","Mégenrage récent","Besoin de changer d'apparence aujourd'hui"];
+  var GENRE_AUTO = ["Changer de vêtements","Binder / packer si besoin et si sûr","Voix : exercice ou pause vocale","Regarder du contenu qui aide (positif)","Éviter le miroir un moment","Se rappeler que le ressenti est valide","Objet ou vêtement qui aide, à portée de main"];
+  var GENRE_PARTNER = ["Utiliser le prénom et les accords justes","Ne pas relever un mégenrage accidentel sur le moment","Complimenter sans commenter le corps","Proposer de sortir faire les magasins si besoin","Rassurer sans minimiser le ressenti"];
+
+  var DEREAL_TAGS = ["Monde qui semble irréel","Sensation de rêve éveillé","Distance avec l'environnement","Sons ou lumières qui semblent étranges","Impression de décor en carton","Difficulté à se sentir concerné","Temps qui semble ralenti ou accéléré"];
+  var DEREAL_AUTO = ["Toucher des textures différentes","Nommer à voix haute ce qu'on voit","Sortir prendre l'air","Eau froide sur les mains ou le visage","Marcher pieds nus si possible","Se concentrer sur un son précis"];
+  var DEREAL_PARTNER = ["Décrire calmement l'environnement","Proposer un appui physique (main, épaule)","Parler d'une voix stable et posée","Éviter de dramatiser ou de tester la perception","Rester présent sans forcer l'interaction"];
+
+  var HALLU_TAGS = ["Perception auditive inhabituelle","Perception visuelle inhabituelle","Sensation de présence","Difficulté à distinguer réel / pas réel","Fatigue ou stress élevé associé","Besoin de vérifier avec quelqu'un"];
+  var HALLU_AUTO = ["Noter ce qui est perçu, sans jugement","Vérifier avec un repère factuel (heure, lieu)","Réduire les stimuli (lumière, bruit)","Se reposer si possible","Contacter un professionnel si besoin"];
+  var HALLU_PARTNER = ["Demander calmement ce qui est perçu","Ne pas se moquer ni dramatiser","Aider à vérifier la réalité factuelle avec douceur","Proposer de contacter un professionnel si ça persiste","Rester présent et posé"];
+
+  var GENERAL_PHYSICAL = ["Boire de l'eau","Manger quelque chose","Aller aux toilettes","Prendre le traitement prévu","Dormir un minimum / se reposer","Bouger le corps un peu","Sortir / lumière du jour","Température corporelle correcte","Hygiène de base faite"];
+  var GENERAL_MENTAL = ["Moment sans stimulation","Sentiment de sécurité","Pas d'obligation de « performer »","Espace pour exprimer ce qui se passe","Temps de transition avant/après un effort","Contact social choisi (si besoin)"];
+
+  var PROTOCOL_SECTIONS = ["tsa","tspt","tdi","divers"];
+  var PROTOCOL_SECTION_LABELS = { tsa:"Neurodivergence", tspt:"CPTSD", tdi:"Dissociation", divers:"Divers" };
+  var PROTOCOL_DEFAULTS = {
+    tsa: [
+      { title:"Si surcharge sensorielle", steps:[
+        "Baisser la lumière et le bruit ambiant si possible",
+        "Proposer de retirer un vêtement inconfortable ou de mettre le casque anti-bruit",
+        "Ne pas forcer la parole — un simple signe suffit",
+        "Laisser de l'espace, rester disponible sans intervenir sauf si demandé"
+      ]},
+      { title:"Si blocage / paralysie de tâche", steps:[
+        "Ne pas presser ni culpabiliser",
+        "Proposer une seule étape très concrète à la fois",
+        "Offrir de faire la tâche avec, pas à sa place",
+        "Accepter que ça prenne le temps qu'il faut"
+      ]}
+    ],
+    tspt: [
+      { title:"Si flashback", steps:[
+        "Parler doucement, d'une voix posée",
+        "Rappeler calmement le lieu et l'année présente",
+        "Ne pas toucher sans prévenir",
+        "Proposer un point d'ancrage (objet, respiration) sans insister",
+        "Rester présent jusqu'au retour du contact avec le présent"
+      ]},
+      { title:"Si figement (freeze)", steps:[
+        "Ne pas bouger brusquement ni élever la voix",
+        "Nommer doucement ce qui se passe autour",
+        "Proposer un contact physique seulement si accepté à l'avance",
+        "Attendre — le figement se lève à son rythme"
+      ]}
+    ],
+    tdi: [
+      { title:"Si dissociation forte / perte de repère", steps:[
+        "Dire calmement qui parle et où l'on est",
+        "Ne pas tester la mémoire ni poser de questions pièges",
+        "Utiliser une voix douce et familière",
+        "Proposer un ancrage sensoriel (objet, texture, boisson fraîche)",
+        "Rester présent sans geste brusque"
+      ]},
+      { title:"Si confusion sur l'identité du moment", steps:[
+        "Ne pas insister pour savoir « qui » est là",
+        "Parler simplement, sans complexité inutile",
+        "Noter l'heure et ce qui se passe, pour plus tard",
+        "Attendre que le contact se stabilise avant toute décision importante"
+      ]}
+    ],
+    divers: [
+      { title:"Si dysphorie de genre aiguë", steps:[
+        "Utiliser le prénom et les accords justes sans qu'il faille le redemander",
+        "Ne pas commenter le corps ou l'apparence",
+        "Proposer une solution concrète si un vêtement ou un miroir pose problème",
+        "Rassurer sans minimiser"
+      ]},
+      { title:"Si hallucination ou perception inhabituelle", steps:[
+        "Demander calmement ce qui est perçu, sans jugement",
+        "Ne pas se moquer ni dramatiser",
+        "Aider à vérifier la réalité factuelle avec douceur (heure, lieu)",
+        "Proposer de contacter un professionnel si ça persiste ou inquiète"
+      ]}
+    ]
+  };
+  function buildDefaultProtocols(){
+    var out = {};
+    PROTOCOL_SECTIONS.forEach(function(sec){
+      out[sec] = PROTOCOL_DEFAULTS[sec].map(function(c){ return protoCard(c.title, c.steps); });
+    });
+    return out;
+  }
+
+  var MOOD_PRESETS = [
+    {label:"Calme", swatch:"calm"}, {label:"À l'aise", swatch:"calm"}, {label:"Content", swatch:"calm"},
+    {label:"Neutre", swatch:"neutral"}, {label:"En pause", swatch:"neutral"}, {label:"Indisponible", swatch:"neutral"},
+    {label:"Fatigué", swatch:"rest"}, {label:"Épuisé", swatch:"rest"}, {label:"Dissocié", swatch:"rest"},
+    {label:"Surchargé", swatch:"attention"}, {label:"Irritable", swatch:"attention"},
+    {label:"En flashback", swatch:"urgent"}, {label:"En crise", swatch:"urgent"}
+  ];
+  var NEED_PRESETS = [
+    {label:"Aucun besoin urgent", swatch:"neutral"},
+    {label:"Silence", swatch:"attention"}, {label:"Être seul", swatch:"attention"},
+    {label:"Être accompagné sans parler", swatch:"calm"}, {label:"Aide pour une tâche", swatch:"attention"},
+    {label:"Pause sensorielle", swatch:"attention"}, {label:"Contact physique rassurant", swatch:"calm"},
+    {label:"Ne pas être touché", swatch:"urgent"}, {label:"Réassurance verbale", swatch:"calm"},
+    {label:"Boire / manger", swatch:"attention"}, {label:"Aide médicale", swatch:"urgent"}
+  ];
+
+  function defaultDiag(title, tags, auto, partner){
+    return { title: title, tags: tags.map(tag), auto: auto.map(reg), partner: partner.map(reg) };
+  }
+
+  var DISSO_FIELDS = [["conscience","État de conscience"], ["alterType","Type d'alter"], ["fonctionnel","Alter fonctionnel"]];
+
+  function defaultDay(){
+    return { dateKey: todayKey(), worst: { tsa:false, tspt:false, tdi:false }, weighing: [], yesterday: null };
+  }
+
+  function defaultEmergencyNumbers(){
+    return [
+      { id: uid("em_"), label: "SAMU (urgences médicales)", value: "15" },
+      { id: uid("em_"), label: "Police / Gendarmerie", value: "17" },
+      { id: uid("em_"), label: "Pompiers", value: "18" },
+      { id: uid("em_"), label: "Urgence Europe", value: "112" },
+      { id: uid("em_"), label: "Prévention suicide", value: "3114" },
+      { id: uid("em_"), label: "SOS Amitié", value: "09 72 39 40 50" },
+      { id: uid("em_"), label: "Violences Femmes Info", value: "3919" }
+    ];
+  }
+  function defaultEmergency(){
+    return { numbers: defaultEmergencyNumbers(), psychiatrist: "", psychologist: "" };
+  }
+
+  function defaultState(){
+    var tdiDiag = defaultDiag("Dissociation (TDI)", TDI_TAGS, TDI_AUTO, TDI_PARTNER);
+    tdiDiag.disso = { conscience: [], alterType: [], fonctionnel: [] };
+    return {
+      v: 1,
+      ribbon: {
+        verbal: true, masking: true, energy: 70, energyNote: "",
+        mood: { label: "Neutre", swatch: "neutral" }
+      },
+      footer: {
+        needs: [],
+        availability: 60, availabilityNote: "",
+        since: { timestamp: null },
+        nextVisit: { timestamp: null },
+        emergency: defaultEmergency()
+      },
+      general: {
+        physical: GENERAL_PHYSICAL.map(need),
+        mental: GENERAL_MENTAL.map(need)
+      },
+      diagnoses: {
+        tsa: defaultDiag("Neurodivergence (TSA / TDA)", TSA_TAGS, TSA_AUTO, TSA_PARTNER),
+        tspt: defaultDiag("CPTSD (stress post-traumatique complexe)", TSPT_TAGS, TSPT_AUTO, TSPT_PARTNER),
+        tdi: tdiDiag,
+        genre: defaultDiag("Dysphorie de genre", GENRE_TAGS, GENRE_AUTO, GENRE_PARTNER),
+        dereal: defaultDiag("Déréalisation", DEREAL_TAGS, DEREAL_AUTO, DEREAL_PARTNER),
+        hallu: defaultDiag("Hallucinations", HALLU_TAGS, HALLU_AUTO, HALLU_PARTNER)
+      },
+      topics: [],
+      day: defaultDay(),
+      protocols: buildDefaultProtocols(),
+      lastUpdated: null
+    };
+  }
+
+  function normalizeState(s){
+    var d = defaultState();
+    if (!s.footer.nextVisit) s.footer.nextVisit = d.footer.nextVisit;
+    if (!s.footer.needs){
+      if (s.footer.need && s.footer.need.label && s.footer.need.label !== "Aucun besoin urgent"){
+        s.footer.needs = [{ id: uid("fn_"), label: s.footer.need.label, swatch: s.footer.need.swatch || "neutral" }];
+      } else {
+        s.footer.needs = [];
+      }
+    }
+    delete s.footer.need;
+    if (typeof s.ribbon.energyNote !== "string") s.ribbon.energyNote = "";
+    if (typeof s.footer.availabilityNote !== "string") s.footer.availabilityNote = "";
+    if (!s.footer.emergency) s.footer.emergency = defaultEmergency();
+    if (!Array.isArray(s.footer.emergency.numbers)) s.footer.emergency.numbers = [];
+    if (!s.footer.emergency.numbers.length) s.footer.emergency.numbers = defaultEmergencyNumbers();
+    if (typeof s.footer.emergency.psychiatrist !== "string") s.footer.emergency.psychiatrist = "";
+    if (typeof s.footer.emergency.psychologist !== "string") s.footer.emergency.psychologist = "";
+    if (!s.diagnoses.genre) s.diagnoses.genre = d.diagnoses.genre;
+    if (!s.diagnoses.dereal) s.diagnoses.dereal = d.diagnoses.dereal;
+    if (!s.diagnoses.hallu) s.diagnoses.hallu = d.diagnoses.hallu;
+    if (!s.diagnoses.tdi.disso){
+      s.diagnoses.tdi.disso = { conscience: [], alterType: [], fonctionnel: [] };
+      // migration depuis l'ancienne version (un seul nuage de tags mélangés)
+      if (Array.isArray(s.diagnoses.tdi.dissoTags)){
+        s.diagnoses.tdi.disso.conscience = s.diagnoses.tdi.dissoTags;
+      }
+    }
+    delete s.diagnoses.tdi.dissoTags;
+    if (!s.topics) s.topics = d.topics;
+    // migration des anciens sujets (liste à cocher) vers le nouveau format
+    s.topics = s.topics.map(function(t){
+      if (t.tags && t.subtopics !== undefined) return t; // déjà au nouveau format
+      var migrated = topicItem(t.label);
+      migrated.id = t.id || migrated.id;
+      if (Array.isArray(t.children)){
+        migrated.subtopics = t.children.map(function(c){ return subtopic(c.label); });
+      }
+      if (t.done) migrated.tags.abordee = true;
+      return migrated;
+    });
+    if (!s.day) s.day = d.day;
+    if (!s.day.worst) s.day.worst = d.day.worst;
+    if (!s.day.weighing) s.day.weighing = d.day.weighing;
+    if (!s.day.dateKey) s.day.dateKey = todayKey();
+    if (s.day.yesterday === undefined) s.day.yesterday = null;
+    if (!s.protocols) s.protocols = d.protocols;
+    else PROTOCOL_SECTIONS.forEach(function(sec){ if (!s.protocols[sec]) s.protocols[sec] = d.protocols[sec]; });
+    return s;
+  }
+
+  /* -- bascule automatique du jour : si la date a changé depuis la
+     dernière fois, on archive la journée précédente dans "hier" et on
+     repart à zéro. -- */
+  function rolloverDayIfNeeded(){
+    var key = todayKey();
+    if (state.day.dateKey === key) return false;
+    state.day = {
+      dateKey: key,
+      worst: { tsa:false, tspt:false, tdi:false },
+      weighing: [],
+      yesterday: { worst: state.day.worst, weighing: state.day.weighing }
+    };
+    return true;
+  }
+
+  /* ---------------- persistance (localStorage) ----------------
+     Brouillon privé de cet appareil/navigateur, écrit en temps réel à
+     chaque modification. Pour faire circuler des données entre plusieurs
+     appareils (ex. ordinateur ↔ téléphone), pas de cloud : on exporte un
+     fichier JSON depuis l'un et on l'importe dans l'autre (boutons
+     "Exporter" / "Importer"). */
+  var STORAGE_KEY = "barometre_interieur_personal_state";
+
+  function hasLocalStorage(){
+    try {
+      var testKey = STORAGE_KEY + "__test__";
+      window.localStorage.setItem(testKey, "1");
+      window.localStorage.removeItem(testKey);
+      return true;
+    } catch (e) { return false; }
+  }
+
+  function readEmbeddedState(){
+    try {
+      var raw = document.getElementById("app-state").textContent.trim();
+      var parsed = raw && raw !== "null" ? JSON.parse(raw) : null;
+      return parsed && parsed.diagnoses ? parsed : null;
+    } catch (e) { return null; }
+  }
+
+  async function loadStorageState(){
+    if (!hasLocalStorage()) return null;
+    try {
+      var raw = window.localStorage.getItem(STORAGE_KEY);
+      return raw ? JSON.parse(raw) : null;
+    } catch (e) { return null; } // clé absente ou erreur -> pas de donnée
+  }
+
+  async function saveStorageState(stateObj){
+    if (!hasLocalStorage()) return false;
+    try {
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(stateObj));
+      return true;
+    } catch (e) { return false; }
+  }
+
+  /* ---------------- state (seed synchrone, puis mise à jour async) ----------------
+     On affiche tout de suite avec l'état intégré dans le document (ou un
+     état par défaut) pour ne pas bloquer l'UI, puis on va chercher en
+     arrière-plan le brouillon local et on garde le plus récent des deux. */
+  var state = normalizeState(readEmbeddedState() || defaultState());
+  rolloverDayIfNeeded();
+
+  var isReadOnly = false;
+
+  function saveLocal(){
+    state.lastUpdated = Date.now();
+    renderUpdatedNote();
+    saveStorageState(state); // écriture réelle-temps, en tâche de fond
+  }
+
+  function renderUpdatedNote(){
+    var el = document.getElementById("updated-note");
+    if (el){
+      var when = state.lastUpdated ? relativeTime(state.lastUpdated) : "jamais";
+      el.textContent = "Enregistré en local " + when;
+    }
+  }
+
+  function relativeTime(ts){
+    var diff = Math.max(0, Date.now() - ts);
+    var m = Math.floor(diff / 60000);
+    if (m < 1) return "à l'instant";
+    if (m < 60) return "il y a " + m + " min";
+    var hrs = Math.floor(m / 60);
+    if (hrs < 24) return "il y a " + hrs + " h";
+    var days = Math.floor(hrs / 24);
+    return "il y a " + days + " j";
+  }
+
+  /* -- export : télécharge un fichier JSON avec toutes les données -- */
+  function exportState(){
+    var blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
+    var url = URL.createObjectURL(blob);
+    var stamp = new Date().toISOString().slice(0, 10);
+    var a = document.createElement("a");
+    a.href = url;
+    a.download = "barometre-interieur_" + stamp + ".json";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  /* -- import : charge un fichier JSON exporté depuis cette app et
+     remplace les données actuelles (après confirmation) -- */
+  function importStateFromFile(file){
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function(){
+      var parsed;
+      try { parsed = JSON.parse(reader.result); }
+      catch (e) { alert("Fichier invalide : ce n'est pas un JSON lisible."); return; }
+      if (!parsed || typeof parsed !== "object" || !parsed.diagnoses){
+        alert("Fichier invalide : ce n'est pas un export du Baromètre Intérieur.");
+        return;
+      }
+      if (!confirm("Remplacer toutes les données actuelles par celles de ce fichier ?")) return;
+      state = normalizeState(parsed);
+      rolloverDayIfNeeded();
+      renderAll();
+      saveLocal();
+    };
+    reader.onerror = function(){ alert("Impossible de lire ce fichier."); };
+    reader.readAsText(file);
+  }
+
+  /* -- au chargement : on va chercher le brouillon local en arrière-plan
+     et on garde le plus récent des deux -- */
+  async function hydrateFromStorage(){
+    if (!hasLocalStorage()) return;
+    var saved = await loadStorageState();
+    if (saved && saved.diagnoses && (saved.lastUpdated || 0) > (state.lastUpdated || 0)){
+      state = normalizeState(saved);
+      rolloverDayIfNeeded();
+      renderAll();
+    }
+    renderUpdatedNote();
+  }
+
+  function enterReadOnly(){
+    isReadOnly = true;
+    document.body.classList.add("is-readonly");
+    updateRibbonSizeVars();
+  }
+
+  function mutate(fn){
+    fn(state);
+    renderAll();
+    saveLocal();
+  }
+
+  /* ---------------- tabs ---------------- */
+  var activeTab = "general";
+  try { activeTab = sessionStorage.getItem("bi_active_tab") || "general"; } catch(e){}
+
+  function setActiveTab(name){
+    activeTab = name;
+    document.querySelectorAll(".panel").forEach(function(p){
+      p.classList.toggle("active", p.dataset.panel === name);
+    });
+    document.querySelectorAll(".tab-btn").forEach(function(b){
+      b.setAttribute("aria-selected", String(b.dataset.tab === name));
+    });
+    try { sessionStorage.setItem("bi_active_tab", name); } catch(e){}
+  }
+
+  /* ---------------- render: ribbons ---------------- */
+  function renderRibbons(){
+    var r = state.ribbon, f = state.footer;
+
+    var vBtn = document.getElementById("btn-verbal");
+    vBtn.setAttribute("aria-pressed", String(r.verbal));
+    document.getElementById("verbal-label").textContent = r.verbal ? "Verbal" : "Non verbal";
+
+    var mBtn = document.getElementById("btn-masking");
+    mBtn.setAttribute("aria-pressed", String(r.masking));
+    document.getElementById("masking-label").textContent = r.masking ? "Masking" : "Non masking";
+
+    document.getElementById("mood-dot").style.background = swatchVar(r.mood.swatch);
+    document.getElementById("mood-label").textContent = r.mood.label;
+
+    document.getElementById("energy-fill").style.width = clamp(r.energy,0,100) + "%";
+    document.getElementById("energy-label").textContent = clamp(r.energy,0,100) + "%";
+    applyGaugeColor("btn-energy", r.energy);
+    document.getElementById("btn-energy-note").textContent = r.energyNote ? "Explication : " + truncate(r.energyNote, 26) : "Explication";
+
+    renderNeedVoyant();
+
+    document.getElementById("availability-fill").style.width = clamp(f.availability,0,100) + "%";
+    document.getElementById("availability-label").textContent = clamp(f.availability,0,100) + "%";
+    applyGaugeColor("btn-availability", f.availability);
+    document.getElementById("btn-availability-note").textContent = f.availabilityNote ? "Explication : " + truncate(f.availabilityNote, 26) : "Explication";
+
+    renderTimerLabel();
+    renderNextVisitLabel();
+    renderUpdatedNote();
+  }
+
+  function renderNeedVoyant(){
+    var wrap = document.getElementById("need-list");
+    clearNode(wrap);
+    var items = state.footer.needs;
+    if (!items.length){
+      wrap.appendChild(h("span", { class:"need-pill" }, [
+        h("span", { class:"swatch-dot", style:"background:" + swatchVar("neutral") + ";" }),
+        h("span", { class:"voyant-label", text:"Aucun besoin urgent" })
+      ]));
+      return;
+    }
+    items.forEach(function(it){
+      wrap.appendChild(h("span", { class:"need-pill" }, [
+        h("span", { class:"swatch-dot", style:"background:" + swatchVar(it.swatch) + ";" }),
+        h("span", { class:"voyant-label", text: it.label })
+      ]));
+    });
+  }
+
+  function approxLabel(ts){
+    if (!ts) return "Non renseigné";
+    var diff = Date.now() - ts;
+    if (diff < 0) diff = 0;
+    var mins = Math.floor(diff / 60000);
+    if (mins < 60) return "moins d'1 h";
+    var hrs = Math.floor(mins / 60);
+    if (hrs < 24) return "environ " + hrs + " h";
+    var days = Math.floor(hrs / 24);
+    return "environ " + days + (days > 1 ? " jours" : " jour");
+  }
+
+  function renderTimerLabel(){
+    var ts = state.footer.since.timestamp;
+    var el = document.getElementById("timer-label");
+    el.textContent = approxLabel(ts);
+  }
+
+  function formatNextVisit(ts){
+    if (!ts) return "Non prévue";
+    var d = new Date(ts);
+    var days = ["dim.","lun.","mar.","mer.","jeu.","ven.","sam."];
+    var months = ["janv.","févr.","mars","avr.","mai","juin","juil.","août","sept.","oct.","nov.","déc."];
+    var datePart = days[d.getDay()] + " " + d.getDate() + " " + months[d.getMonth()] + " · " + pad2(d.getHours()) + ":" + pad2(d.getMinutes());
+    var diffDays = Math.round((ts - Date.now()) / 86400000);
+    var rel;
+    if (ts < Date.now()) rel = "passée";
+    else if (diffDays <= 0) rel = "aujourd'hui";
+    else if (diffDays === 1) rel = "demain";
+    else rel = "dans " + diffDays + " j";
+    return datePart + " (" + rel + ")";
+  }
+
+  function renderNextVisitLabel(){
+    document.getElementById("nextvisit-label").textContent = formatNextVisit(state.footer.nextVisit.timestamp);
+  }
+
+  function updateClock(){
+    var now = new Date();
+    var days = ["dim.","lun.","mar.","mer.","jeu.","ven.","sam."];
+    var months = ["janv.","févr.","mars","avr.","mai","juin","juil.","août","sept.","oct.","nov.","déc."];
+    document.getElementById("rt-day").textContent = days[now.getDay()] + " " + now.getDate() + " " + months[now.getMonth()];
+    document.getElementById("rt-time").textContent = pad2(now.getHours()) + ":" + pad2(now.getMinutes());
+  }
+
+  function updateRibbonSizeVars(){
+    var top = document.getElementById("ribbon-top");
+    var bot = document.getElementById("ribbon-bottom");
+    var banner = document.getElementById("readonly-banner");
+    var topH = top.offsetHeight + (isReadOnly ? banner.offsetHeight : 0);
+    document.documentElement.style.setProperty("--ribbon-top-h", topH + "px");
+    document.documentElement.style.setProperty("--ribbon-bot-h", bot.offsetHeight + "px");
+  }
+
+  /* ---------------- render: general ---------------- */
+  function renderNeedList(containerId, items, onToggle, onDelete){
+    var el = document.getElementById(containerId);
+    clearNode(el);
+    items.forEach(function(it){
+      var cb = h("input", { type: "checkbox", id: "cb_" + it.id, checked: it.checked || undefined,
+        onchange: function(){ onToggle(it.id); } });
+      var editBtn = h("button", { type:"button", class:"edit", title:"Modifier", onclick: function(){
+        var v = promptEdit(it.label, "Modifier le besoin");
+        if (v) mutate(function(){ it.label = v; });
+      }}, ["✎"]);
+      var row = h("div", { class: "needrow" + (it.checked ? " checked" : "") }, [
+        cb,
+        h("label", { for: "cb_" + it.id, text: it.label }),
+        editBtn,
+        it.custom ? h("button", { type:"button", class:"x", title:"Supprimer", onclick: function(){ onDelete(it.id); } }, ["×"]) : null
+      ]);
+      el.appendChild(row);
+    });
+  }
+
+  function renderGeneral(){
+    renderNeedList("list-physical", state.general.physical, function(id){
+      mutate(function(s){ var it = s.general.physical.find(function(x){return x.id===id;}); if (it) it.checked = !it.checked; });
+    }, function(id){
+      mutate(function(s){ s.general.physical = s.general.physical.filter(function(x){return x.id!==id;}); });
+    });
+    renderNeedList("list-mental", state.general.mental, function(id){
+      mutate(function(s){ var it = s.general.mental.find(function(x){return x.id===id;}); if (it) it.checked = !it.checked; });
+    }, function(id){
+      mutate(function(s){ s.general.mental = s.general.mental.filter(function(x){return x.id!==id;}); });
+    });
+  }
+
+  document.getElementById("btn-add-physical").addEventListener("click", function(){
+    var input = document.getElementById("input-add-physical");
+    var values = parseMultiValues(input.value); if (!values.length) return;
+    mutate(function(s){ values.forEach(function(v){ var n = need(v); n.custom = true; s.general.physical.push(n); }); });
+    input.value = "";
+  });
+  document.getElementById("btn-add-mental").addEventListener("click", function(){
+    var input = document.getElementById("input-add-mental");
+    var values = parseMultiValues(input.value); if (!values.length) return;
+    mutate(function(s){ values.forEach(function(v){ var n = need(v); n.custom = true; s.general.mental.push(n); }); });
+    input.value = "";
+  });
+
+  /* ---------------- render: diagnosis panels ---------------- */
+  var DIAG_DEFAULT_SOURCE = {
+    tsa: { tags: TSA_TAGS, auto: TSA_AUTO, partner: TSA_PARTNER },
+    tspt: { tags: TSPT_TAGS, auto: TSPT_AUTO, partner: TSPT_PARTNER },
+    tdi: { tags: TDI_TAGS, auto: TDI_AUTO, partner: TDI_PARTNER },
+    genre: { tags: GENRE_TAGS, auto: GENRE_AUTO, partner: GENRE_PARTNER },
+    dereal: { tags: DEREAL_TAGS, auto: DEREAL_AUTO, partner: DEREAL_PARTNER },
+    hallu: { tags: HALLU_TAGS, auto: HALLU_AUTO, partner: HALLU_PARTNER }
+  };
+  var DIAG_INTRO = {
+    tsa: "Neurodivergence : ce qui se manifeste, et ce qui aide — seul ou avec de l'aide.",
+    tspt: "CPTSD : signaux du système d'alarme, et pistes pour redescendre.",
+    tdi: "Dissociation : ce qui se passe côté présence/mémoire, et comment revenir.",
+    genre: "Pas un diagnostic à part, mais un sujet à part entière.",
+    dereal: "Quand le monde autour semble ne plus être réel.",
+    hallu: "Ce qui est perçu, pour en parler sans jugement."
+  };
+
+  /* Rendu générique d'un nuage de tags activables — réutilisé pour les
+     symptômes de chaque diagnostic et pour l'état dissociatif. Chaque tag
+     garde une référence directe vers son objet dans le tableau `arr`, donc
+     l'édition modifie l'état en place sans recherche par id. */
+  function renderTagCloud(containerId, arr){
+    var container = document.getElementById(containerId);
+    clearNode(container);
+    arr.forEach(function(t){
+      var editBtn = h("button", { type:"button", class:"edit", title:"Modifier ce tag", onclick: function(ev){
+        ev.stopPropagation();
+        var v = promptEdit(t.label, "Modifier le tag");
+        if (v) mutate(function(){ t.label = v; });
+      }}, ["✎"]);
+      var xBtn = h("button", { type:"button", class:"x", title:"Retirer ce tag", onclick: function(ev){
+        ev.stopPropagation();
+        mutate(function(){ var idx = arr.indexOf(t); if (idx >= 0) arr.splice(idx, 1); });
+      }}, ["×"]);
+      var chip = h("button", { type:"button", class:"tag", "aria-pressed": String(!!t.active), onclick: function(){
+        mutate(function(){ t.active = !t.active; });
+      }}, [t.label, editBtn, xBtn]);
+      container.appendChild(chip);
+    });
+  }
+
+  var REG_STATES = [["necessaire","Nécessaire"], ["prevu","Prévu"], ["pas_necessaire","Pas nécessaire"], ["impossible","Impossible"], ["decale","Décalé"]];
+
+  function renderRegList(diagKey, listKey){
+    var container = document.getElementById("diag-" + listKey + "-" + diagKey);
+    clearNode(container);
+    var arr = state.diagnoses[diagKey][listKey];
+    arr.forEach(function(it){
+      var group = h("div", { class:"stategroup" }, REG_STATES.map(function(pair){
+        var key = pair[0], lbl = pair[1];
+        return h("button", { type:"button", class:"state-btn " + key, "aria-pressed": String(it.state===key), onclick: function(){
+          mutate(function(){ it.state = (it.state === key) ? null : key; });
+        }}, [lbl]);
+      }));
+      var editBtn = h("button", { type:"button", class:"edit", title:"Modifier", onclick: function(){
+        var v = promptEdit(it.label, "Modifier l'action");
+        if (v) mutate(function(){ it.label = v; });
+      }}, ["✎"]);
+      var row = h("div", { class:"regitem" }, [
+        h("span", { class:"label", text: it.label }),
+        group,
+        editBtn,
+        h("button", { type:"button", class:"x", title:"Supprimer", onclick: function(){
+          mutate(function(){ var idx = arr.indexOf(it); if (idx >= 0) arr.splice(idx, 1); });
+        }}, ["×"])
+      ]);
+      container.appendChild(row);
+    });
+  }
+
+  function restoreDefaults(diagKey){
+    mutate(function(s){
+      var diag = s.diagnoses[diagKey];
+      var src = DIAG_DEFAULT_SOURCE[diagKey];
+      src.tags.forEach(function(label){
+        if (!diag.tags.some(function(t){ return t.label === label; })) diag.tags.push(tag(label));
+      });
+      src.auto.forEach(function(label){
+        if (!diag.auto.some(function(t){ return t.label === label; })) diag.auto.push(reg(label));
+      });
+      src.partner.forEach(function(label){
+        if (!diag.partner.some(function(t){ return t.label === label; })) diag.partner.push(reg(label));
+      });
+    });
+  }
+
+  function appendDissoCard(panel){
+    var card = h("div", { class:"card" }, [
+      h("div", { class:"card-head" }, [ h("h2", { text: "État dissociatif" }) ])
+    ]);
+    DISSO_FIELDS.forEach(function(pair){
+      var key = pair[0], title = pair[1];
+      card.appendChild(h("div", { class:"field-label", text: title }));
+      card.appendChild(h("div", { class:"taglist", id: "tdi-disso-" + key }));
+      card.appendChild(h("div", { class:"add-row" }, [
+        h("input", { type:"text", id: "tdi-disso-input-" + key, placeholder:"Ajouter un tag…" }),
+        h("button", { type:"button", class:"btn", onclick: function(){
+          var input = document.getElementById("tdi-disso-input-" + key);
+          var v = input.value.trim(); if (!v) return;
+          mutate(function(s){ var t = tag(v); t.active = true; t.custom = true; s.diagnoses.tdi.disso[key].push(t); });
+          input.value = "";
+        }}, ["Ajouter"])
+      ]));
+    });
+    panel.appendChild(card);
+    DISSO_FIELDS.forEach(function(pair){
+      renderTagCloud("tdi-disso-" + pair[0], state.diagnoses.tdi.disso[pair[0]]);
+    });
+  }
+
+  function appendDiagBlock(panel, diagKey, headingTag, extraFn){
+    var diag = state.diagnoses[diagKey];
+
+    panel.appendChild(h("div", { class:"intro" }, [
+      h(headingTag, { text: diag.title }),
+      h("p", { text: DIAG_INTRO[diagKey] })
+    ]));
+
+    if (extraFn) extraFn(panel);
+
+    var tagCard = h("div", { class:"card" }, [
+      h("div", { class:"card-head" }, [
+        h("h2", { text: "Ce qui se manifeste là" }),
+        h("button", { type:"button", class:"restore-link", onclick: function(){ restoreDefaults(diagKey); } }, ["↺ Restaurer les suggestions manquantes"])
+      ]),
+      h("div", { class:"taglist", id: "diag-tags-" + diagKey }),
+      h("div", { class:"add-row" }, [
+        h("input", { type:"text", id: "diag-tag-input-" + diagKey, placeholder:"Ajouter un tag…" }),
+        h("button", { type:"button", class:"btn", onclick: function(){
+          var input = document.getElementById("diag-tag-input-" + diagKey);
+          var v = input.value.trim(); if (!v) return;
+          mutate(function(s){ var t = tag(v); t.active = true; t.custom = true; s.diagnoses[diagKey].tags.push(t); });
+          input.value = "";
+        }}, ["Ajouter"])
+      ])
+    ]);
+    panel.appendChild(tagCard);
+
+    [["auto","Réguler seul"], ["partner","Réguler avec un partenaire"]].forEach(function(pair){
+      var listKey = pair[0], title = pair[1];
+      panel.appendChild(h("div", { class:"card" }, [
+        h("div", { class:"card-head" }, [ h("h2", { text: title }) ]),
+        h("div", { class:"reglist", id: "diag-" + listKey + "-" + diagKey }),
+        h("div", { class:"add-row" }, [
+          h("input", { type:"text", id: "diag-" + listKey + "-input-" + diagKey, placeholder:"Ajouter une action…" }),
+          h("button", { type:"button", class:"btn", onclick: function(){
+            var input = document.getElementById("diag-" + listKey + "-input-" + diagKey);
+            var v = input.value.trim(); if (!v) return;
+            mutate(function(s){ var r = reg(v); r.custom = true; s.diagnoses[diagKey][listKey].push(r); });
+            input.value = "";
+          }}, ["Ajouter"])
+        ])
+      ]));
+    });
+
+    renderTagCloud("diag-tags-" + diagKey, state.diagnoses[diagKey].tags);
+    renderRegList(diagKey, "auto");
+    renderRegList(diagKey, "partner");
+  }
+
+  function buildDiagPanel(diagKey){
+    var panel = document.getElementById("panel-" + diagKey);
+    clearNode(panel);
+    appendDiagBlock(panel, diagKey, "h1", diagKey === "tdi" ? appendDissoCard : null);
+  }
+
+  function buildDiversPanel(){
+    var panel = document.getElementById("panel-divers");
+    clearNode(panel);
+    panel.appendChild(h("div", { class:"intro" }, [
+      h("h1", { text: "Divers à aborder" }),
+      h("p", { text: "Pas des diagnostics à part entière, mais des sujets qui comptent et qui doivent être posés sur la table." })
+    ]));
+    ["genre","dereal","hallu"].forEach(function(key, idx){
+      if (idx > 0) panel.appendChild(h("hr", { style: "border:none;border-top:1px solid var(--border);margin:28px 0 18px;" }));
+      appendDiagBlock(panel, key, "h2");
+    });
+  }
+
+  function renderDiagPanels(){
+    ["tsa","tspt","tdi"].forEach(buildDiagPanel);
+    buildDiversPanel();
+    updateTabWarnings();
+  }
+
+  /* -- avertissement sur l'onglet : encadré rouge + ⚠ si un symptôme est
+     actif ou si un besoin de régulation a été activé dans cette section -- */
+  var TAB_DIAG_KEYS = { tsa:["tsa"], tspt:["tspt"], tdi:["tdi"], divers:["genre","dereal","hallu"] };
+
+  function diagHasActiveSymptomOrReg(diagKey){
+    var diag = state.diagnoses[diagKey];
+    if (!diag) return false;
+    var tagsActive = diag.tags.some(function(t){ return t.active; });
+    var dissoActive = diag.disso ? Object.keys(diag.disso).some(function(k){
+      return diag.disso[k].some(function(t){ return t.active; });
+    }) : false;
+    var regActive = diag.auto.some(function(r){ return !!r.state; }) || diag.partner.some(function(r){ return !!r.state; });
+    return tagsActive || dissoActive || regActive;
+  }
+
+  function updateTabWarnings(){
+    Object.keys(TAB_DIAG_KEYS).forEach(function(tabKey){
+      var hasWarning = TAB_DIAG_KEYS[tabKey].some(diagHasActiveSymptomOrReg);
+      var btn = document.querySelector('.tab-btn[data-tab="' + tabKey + '"]');
+      if (!btn) return;
+      btn.classList.toggle("has-warning", hasWarning);
+      var icon = btn.querySelector(".tab-warning-icon");
+      if (hasWarning && !icon){
+        btn.appendChild(h("span", { class:"tab-warning-icon", title:"Symptôme ou besoin de régulation actif" }, ["⚠"]));
+      } else if (!hasWarning && icon){
+        btn.removeChild(icon);
+      }
+    });
+  }
+
+  /* ---------------- render: topics ("sujets à aborder") ---------------- */
+  var STATUS_CHIPS = [["abordee","Abordé"], ["comprise","Compris"], ["revenir","Revenir dessus"]];
+  var currentTopicId = null;
+  function findTopic(id){ return state.topics.find(function(t){ return t.id === id; }); }
+
+  function renderTopicsPanel(){
+    var panel = document.getElementById("panel-topics");
+    clearNode(panel);
+    panel.appendChild(h("div", { class:"intro" }, [
+      h("h1", { text: "Sujets à aborder" }),
+      h("p", { text: "Appuyer sur un sujet ouvre ses sous-sujets, une explication et des notes. Les statuts se changent directement sur la liste." })
+    ]));
+
+    var card = h("div", { class:"card" });
+    var list = h("div", { id: "topics-list" });
+    card.appendChild(list);
+    card.appendChild(h("div", { class:"add-row" }, [
+      h("input", { type:"text", id: "topics-add-input", placeholder:"Ajouter un sujet…" }),
+      h("button", { type:"button", class:"btn", onclick: function(){
+        var input = document.getElementById("topics-add-input");
+        var v = input.value.trim(); if (!v) return;
+        mutate(function(s){ s.topics.push(topicItem(v)); });
+        input.value = "";
+      }}, ["Ajouter"])
+    ]));
+    panel.appendChild(card);
+
+    if (!state.topics.length){
+      list.appendChild(h("p", { class:"empty-hint", text:"Aucun sujet pour l'instant — ajoute ce qu'il y a à aborder." }));
+      return;
+    }
+
+    state.topics.forEach(function(t){
+      var chips = h("div", { class:"topic-status-row" }, STATUS_CHIPS.map(function(pair){
+        var key = pair[0], lbl = pair[1];
+        return h("button", { type:"button", class:"status-chip " + key, "aria-pressed": String(!!t.tags[key]), onclick: function(ev){
+          ev.stopPropagation();
+          mutate(function(){ t.tags[key] = !t.tags[key]; });
+        }}, [lbl]);
+      }));
+      var delBtn = h("button", { type:"button", class:"x", title:"Supprimer le sujet", onclick: function(ev){
+        ev.stopPropagation();
+        mutate(function(s){ s.topics = s.topics.filter(function(x){ return x.id !== t.id; }); });
+      }}, ["×"]);
+      var row = h("div", { class:"topic-row" }, [
+        h("span", { class:"topic-label", text: t.label }),
+        chips,
+        delBtn
+      ]);
+      row.addEventListener("click", function(){
+        currentTopicId = t.id;
+        renderTopicPopover();
+        openPopover("pop-topic", row);
+      });
+      list.appendChild(row);
+    });
+  }
+
+  /* -- popover d'édition d'un sujet (sous-sujets, explication, notes) -- */
+  function renderTopicPopover(){
+    var t = findTopic(currentTopicId);
+    if (!t) { closePopover("pop-topic"); return; }
+    document.getElementById("pop-topic-title").textContent = t.label;
+
+    var subWrap = document.getElementById("pop-topic-subtopics");
+    clearNode(subWrap);
+    if (!t.subtopics.length){
+      subWrap.appendChild(h("p", { class:"empty-hint", text:"Aucun sous-sujet pour l'instant." }));
+    } else {
+      t.subtopics.forEach(function(sub){
+        var editBtn = h("button", { type:"button", class:"edit", title:"Modifier", onclick: function(){
+          var v = promptEdit(sub.label, "Modifier le sous-sujet");
+          if (v) { mutate(function(){ sub.label = v; }); renderTopicPopover(); }
+        }}, ["✎"]);
+        var delBtn = h("button", { type:"button", class:"x", title:"Supprimer", onclick: function(){
+          mutate(function(){ var idx = t.subtopics.indexOf(sub); if (idx >= 0) t.subtopics.splice(idx, 1); });
+          renderTopicPopover();
+        }}, ["×"]);
+        subWrap.appendChild(h("div", { class:"subtopic-row" }, [
+          h("span", { class:"t", text: sub.label }), editBtn, delBtn
+        ]));
+      });
+    }
+
+    document.getElementById("pop-topic-explanation").value = t.explanation || "";
+    document.getElementById("pop-topic-notes").value = t.notes || "";
+  }
+
+  document.getElementById("pop-topic-subtopic-add").addEventListener("click", function(){
+    var input = document.getElementById("pop-topic-subtopic-input");
+    var v = input.value.trim(); if (!v) return;
+    var t = findTopic(currentTopicId); if (!t) return;
+    mutate(function(){ t.subtopics.push(subtopic(v)); });
+    input.value = "";
+    renderTopicPopover();
+  });
+
+  document.getElementById("pop-topic-explanation").addEventListener("input", function(){
+    var v = this.value;
+    var t = findTopic(currentTopicId); if (!t) return;
+    mutate(function(){ t.explanation = v; });
+  });
+  document.getElementById("pop-topic-notes").addEventListener("input", function(){
+    var v = this.value;
+    var t = findTopic(currentTopicId); if (!t) return;
+    mutate(function(){ t.notes = v; });
+  });
+
+  document.getElementById("pop-topic-delete").addEventListener("click", function(){
+    mutate(function(s){ s.topics = s.topics.filter(function(x){ return x.id !== currentTopicId; }); });
+    closePopover("pop-topic");
+  });
+  document.getElementById("pop-topic-close").addEventListener("click", function(){
+    closePopover("pop-topic");
+  });
+
+  /* ---------------- render: "La journée ?" ---------------- */
+  var DAY_DIAG_LABELS = { tsa: "Neurodivergence", tspt: "CPTSD", tdi: "Dissociation" };
+
+  function renderDayPanel(){
+    if (rolloverDayIfNeeded()) saveLocal();
+
+    var panel = document.getElementById("panel-day");
+    clearNode(panel);
+    panel.appendChild(h("div", { class:"intro" }, [
+      h("h1", { text: "La journée ?" }),
+      h("p", { text: "Un point rapide sur ce qui a pesé aujourd'hui." })
+    ]));
+
+    if (state.day.yesterday){
+      var y = state.day.yesterday;
+      var yWorstLabels = ["tsa","tspt","tdi"].filter(function(k){ return y.worst && y.worst[k]; }).map(function(k){ return DAY_DIAG_LABELS[k]; });
+      var yCard = h("div", { class:"card" }, [
+        h("div", { class:"card-head" }, [ h("h2", { text: "Hier" }) ]),
+      ]);
+      yCard.appendChild(h("p", { class:"sub", text: "Le pire à gérer : " + (yWorstLabels.length ? yWorstLabels.join(", ") : "rien de signalé") }));
+      if (y.weighing && y.weighing.length){
+        var yList = h("div", { class:"reglist" });
+        y.weighing.forEach(function(it){
+          yList.appendChild(h("div", { class:"regitem" }, [ h("span", { class:"label", text: it.label }) ]));
+        });
+        yCard.appendChild(yList);
+      } else {
+        yCard.appendChild(h("p", { class:"empty-hint", text:"Rien de noté." }));
+      }
+      panel.appendChild(yCard);
+    }
+
+    var worstCard = h("div", { class:"card" }, [
+      h("div", { class:"card-head" }, [
+        h("h2", { text: "Ce qui a été le pire à gérer" }),
+        h("button", { type:"button", class:"restore-link", onclick: function(){
+          mutate(function(s){ s.day.worst = { tsa:false, tspt:false, tdi:false }; s.day.weighing = []; });
+        }}, ["↺ Réinitialiser (sans attendre le changement de jour)"])
+      ]),
+      h("div", { class:"chip-select-row", id:"day-worst-row" })
+    ]);
+    panel.appendChild(worstCard);
+
+    var chipRow = worstCard.querySelector("#day-worst-row");
+    ["tsa","tspt","tdi"].forEach(function(key){
+      chipRow.appendChild(h("button", { type:"button", class:"chip", "aria-pressed": String(!!state.day.worst[key]), onclick: function(){
+        mutate(function(s){ s.day.worst[key] = !s.day.worst[key]; });
+      }}, [DAY_DIAG_LABELS[key]]));
+    });
+
+    var weighCard = h("div", { class:"card" }, [
+      h("div", { class:"card-head" }, [ h("h2", { text: "Ce qui a travaillé aujourd'hui" }) ]),
+      h("div", { class:"reglist", id:"day-weighing-list" }),
+      h("div", { class:"add-row" }, [
+        h("input", { type:"text", id:"day-weighing-input", placeholder:"Ajouter une pensée, un événement…" }),
+        h("button", { type:"button", class:"btn", onclick: function(){
+          var input = document.getElementById("day-weighing-input");
+          var v = input.value.trim(); if (!v) return;
+          mutate(function(s){ s.day.weighing.push(weighItem(v)); });
+          input.value = "";
+        }}, ["Ajouter"])
+      ])
+    ]);
+    panel.appendChild(weighCard);
+
+    var wList = weighCard.querySelector("#day-weighing-list");
+    if (!state.day.weighing.length){
+      wList.appendChild(h("p", { class:"empty-hint", text:"Rien de noté pour l'instant." }));
+    } else {
+      state.day.weighing.forEach(function(it){
+        wList.appendChild(h("div", { class:"regitem" }, [
+          h("span", { class:"label", text: it.label }),
+          h("button", { type:"button", class:"edit", title:"Modifier", onclick: function(){
+            var v = promptEdit(it.label, "Modifier");
+            if (v) mutate(function(){ it.label = v; });
+          }}, ["✎"]),
+          h("button", { type:"button", class:"x", title:"Supprimer", onclick: function(){
+            mutate(function(s){ s.day.weighing = s.day.weighing.filter(function(x){return x.id!==it.id;}); });
+          }}, ["×"])
+        ]));
+      });
+    }
+  }
+
+  /* ---------------- render: "Que faire si..." ---------------- */
+  function renderProtocolsPanel(){
+    var panel = document.getElementById("panel-protocols");
+    clearNode(panel);
+    panel.appendChild(h("div", { class:"intro" }, [
+      h("h1", { text: "Que faire si…" }),
+      h("p", { text: "Des marches à suivre courtes, pensées pour quelqu'un qui aide sur le moment — pas pour soi-même en pleine crise." })
+    ]));
+
+    PROTOCOL_SECTIONS.forEach(function(sec){
+      var section = h("div", { class:"proto-section" });
+      section.appendChild(h("div", { class:"proto-section-title", text: PROTOCOL_SECTION_LABELS[sec] }));
+      var grid = h("div", { class:"proto-grid" });
+      section.appendChild(grid);
+
+      state.protocols[sec].forEach(function(card){
+        var stepsBox = h("div", { class:"vignette-steps" });
+        card.steps.forEach(function(st, idx){
+          stepsBox.appendChild(h("div", { class:"vignette-step" }, [
+            h("span", { class:"n", text: (idx+1) + "." }),
+            h("span", { class:"t", text: st.text }),
+            h("button", { type:"button", class:"edit", title:"Modifier cette étape", onclick: function(){
+              var v = promptEdit(st.text, "Modifier l'étape");
+              if (v) mutate(function(){ st.text = v; });
+            }}, ["✎"]),
+            h("button", { type:"button", class:"x", title:"Supprimer cette étape", onclick: function(){
+              mutate(function(s){
+                var c = s.protocols[sec].find(function(x){return x.id===card.id;});
+                if (c) c.steps = c.steps.filter(function(x){return x.id!==st.id;});
+              });
+            }}, ["×"])
+          ]));
+        });
+
+        var vignette = h("div", { class:"vignette" }, [
+          h("div", { class:"vignette-head" }, [
+            h("h3", { text: card.title }),
+            h("button", { type:"button", class:"edit", title:"Modifier le titre", onclick: function(){
+              var v = promptEdit(card.title, "Modifier le titre de la vignette");
+              if (v) mutate(function(){ card.title = v; });
+            }}, ["✎"]),
+            h("button", { type:"button", class:"x", title:"Supprimer cette vignette", onclick: function(){
+              mutate(function(s){ s.protocols[sec] = s.protocols[sec].filter(function(x){return x.id!==card.id;}); });
+            }}, ["×"])
+          ]),
+          stepsBox,
+          h("div", { class:"vignette-add-step" }, [
+            h("input", { type:"text", id:"protostep_"+card.id, placeholder:"Ajouter une étape…" }),
+            h("button", { type:"button", class:"btn", onclick: function(){
+              var input = document.getElementById("protostep_"+card.id);
+              var v = input.value.trim(); if (!v) return;
+              mutate(function(s){
+                var c = s.protocols[sec].find(function(x){return x.id===card.id;});
+                if (c) c.steps.push(protoStep(v));
+              });
+              input.value = "";
+            }}, ["Ajouter"])
+          ])
+        ]);
+        grid.appendChild(vignette);
+      });
+
+      section.appendChild(h("div", { class:"add-card-box" }, [
+        h("div", { class:"add-card-row" }, [
+          h("input", { type:"text", id:"protocard_"+sec, placeholder:"Titre d'une nouvelle vignette (ex. « Si … »)…" }),
+          h("button", { type:"button", class:"btn", onclick: function(){
+            var input = document.getElementById("protocard_"+sec);
+            var v = input.value.trim(); if (!v) return;
+            mutate(function(s){ s.protocols[sec].push(protoCard(v, [])); });
+            input.value = "";
+          }}, ["Ajouter une vignette"])
+        ])
+      ]));
+
+      panel.appendChild(section);
+    });
+  }
+
+  function renderAll(){
+    renderRibbons();
+    renderGeneral();
+    renderDiagPanels();
+    renderProtocolsPanel();
+    renderTopicsPanel();
+    renderDayPanel();
+    setActiveTab(activeTab);
+    requestAnimationFrame(updateRibbonSizeVars);
+  }
+
+  /* ---------------- popovers ---------------- */
+  function openPopover(id, anchorEl){
+    var layer = document.getElementById(id);
+    layer.classList.add("open");
+    var box = document.getElementById(id + "-box");
+    requestAnimationFrame(function(){
+      var ar = anchorEl.getBoundingClientRect();
+      var bw = box.offsetWidth, bh = box.offsetHeight;
+      var top = ar.bottom + 8;
+      if (top + bh > window.innerHeight - 8) top = Math.max(8, ar.top - bh - 8);
+      var left = clamp(ar.left, 8, window.innerWidth - bw - 8);
+      box.style.top = top + "px";
+      box.style.left = left + "px";
+    });
+  }
+  function closePopover(id){ document.getElementById(id).classList.remove("open"); }
+
+  document.querySelectorAll("[data-close]").forEach(function(el){
+    el.addEventListener("click", function(){ closePopover(el.dataset.close); });
+  });
+
+  /* -- mood popover -- */
+  function fillPresetPopover(prefix, presets, current, onPick, onSetCustom){
+    var chipRow = document.getElementById(prefix + "-presets");
+    clearNode(chipRow);
+    presets.forEach(function(p){
+      chipRow.appendChild(h("button", { type:"button", class:"chip", "aria-pressed": String(current.label===p.label), onclick: function(){ onPick(p); } }, [p.label]));
+    });
+    var swRow = document.getElementById(prefix + "-swatches");
+    clearNode(swRow);
+    var chosen = current.swatch;
+    SWATCHES.forEach(function(sw){
+      swRow.appendChild(h("button", { type:"button", class:"swatch-pick", title: SWATCH_NAMES[sw],
+        style: "background:" + swatchVar(sw), "aria-pressed": String(sw===chosen),
+        onclick: function(){ chosen = sw; Array.prototype.forEach.call(swRow.children, function(c,i){ c.setAttribute("aria-pressed", String(SWATCHES[i]===sw)); }); }
+      }, []));
+    });
+    document.getElementById(prefix + "-custom").value = "";
+    document.getElementById(prefix + "-set").onclick = function(){
+      var txt = document.getElementById(prefix + "-custom").value.trim();
+      var label = txt || current.label;
+      onSetCustom({ label: label, swatch: chosen });
+    };
+  }
+
+  document.getElementById("btn-mood").addEventListener("click", function(ev){
+    fillPresetPopover("pop-mood", MOOD_PRESETS, state.ribbon.mood, function(p){
+      mutate(function(s){ s.ribbon.mood = { label: p.label, swatch: p.swatch }; });
+      closePopover("pop-mood");
+    }, function(val){
+      mutate(function(s){ s.ribbon.mood = val; });
+      closePopover("pop-mood");
+    });
+    openPopover("pop-mood", ev.currentTarget);
+  });
+
+  /* -- need popover (jusqu'à 3 à la fois) -- */
+  var needCustomSwatch = "neutral";
+
+  function renderNeedPopoverContent(){
+    var activeEl = document.getElementById("pop-need-active");
+    clearNode(activeEl);
+    if (!state.footer.needs.length){
+      activeEl.appendChild(h("p", { class:"empty-hint", text:"Aucun besoin actif pour l'instant." }));
+    } else {
+      state.footer.needs.forEach(function(it){
+        var editBtn = h("button", { type:"button", class:"edit", title:"Modifier", onclick: function(ev){
+          ev.stopPropagation();
+          var v = promptEdit(it.label, "Modifier le besoin immédiat");
+          if (v) mutate(function(){ it.label = v; });
+          renderNeedPopoverContent();
+        }}, ["✎"]);
+        var xBtn = h("button", { type:"button", class:"x", title:"Retirer", onclick: function(ev){
+          ev.stopPropagation();
+          mutate(function(s){ s.footer.needs = s.footer.needs.filter(function(x){ return x.id !== it.id; }); });
+          renderNeedPopoverContent();
+        }}, ["×"]);
+        activeEl.appendChild(h("span", { class:"tag tag-static" }, [it.label, editBtn, xBtn]));
+      });
+    }
+
+    var atCap = state.footer.needs.length >= 3;
+    document.getElementById("pop-need-hint").textContent = atCap
+      ? "Maximum 3 besoins actifs — en retirer un pour en ajouter un autre."
+      : "Jusqu'à 3 en même temps.";
+
+    var row = document.getElementById("pop-need-presets");
+    clearNode(row);
+    NEED_PRESETS.forEach(function(p){
+      var already = state.footer.needs.some(function(n){ return n.label === p.label; });
+      row.appendChild(h("button", { type:"button", class:"chip" + (!already && atCap ? " chip-disabled" : ""),
+        "aria-pressed": String(already), onclick: function(){
+          mutate(function(s){
+            var idx = s.footer.needs.findIndex(function(x){ return x.label === p.label; });
+            if (idx >= 0) s.footer.needs.splice(idx, 1);
+            else if (s.footer.needs.length < 3) s.footer.needs.push({ id: uid("fn_"), label: p.label, swatch: p.swatch });
+          });
+          renderNeedPopoverContent();
+        }
+      }, [p.label]));
+    });
+
+    var swRow = document.getElementById("pop-need-swatches");
+    clearNode(swRow);
+    SWATCHES.forEach(function(sw){
+      swRow.appendChild(h("button", { type:"button", class:"swatch-pick", title: SWATCH_NAMES[sw],
+        style: "background:" + swatchVar(sw), "aria-pressed": String(sw === needCustomSwatch),
+        onclick: function(){ needCustomSwatch = sw; renderNeedPopoverContent(); }
+      }, []));
+    });
+  }
+
+  document.getElementById("pop-need-set").addEventListener("click", function(){
+    var input = document.getElementById("pop-need-custom");
+    var v = input.value.trim();
+    if (!v || state.footer.needs.length >= 3) return;
+    mutate(function(s){ s.footer.needs.push({ id: uid("fn_"), label: v, swatch: needCustomSwatch }); });
+    input.value = "";
+    renderNeedPopoverContent();
+  });
+
+  document.getElementById("btn-need").addEventListener("click", function(ev){
+    needCustomSwatch = "neutral";
+    document.getElementById("pop-need-custom").value = "";
+    renderNeedPopoverContent();
+    openPopover("pop-need", ev.currentTarget);
+  });
+
+  /* -- gauges -- */
+  function wireGauge(btnId, popId, rangeId, valId, getVal, setVal){
+    document.getElementById(btnId).addEventListener("click", function(ev){
+      var range = document.getElementById(rangeId);
+      range.value = getVal();
+      document.getElementById(valId).textContent = range.value + "%";
+      openPopover(popId, ev.currentTarget);
+    });
+    document.getElementById(rangeId).addEventListener("input", function(){
+      document.getElementById(valId).textContent = this.value + "%";
+      setVal(Number(this.value));
+    });
+  }
+  wireGauge("btn-energy", "pop-energy", "pop-energy-range", "pop-energy-value",
+    function(){ return state.ribbon.energy; },
+    function(v){ mutate(function(s){ s.ribbon.energy = v; }); });
+  wireGauge("btn-availability", "pop-availability", "pop-availability-range", "pop-availability-value",
+    function(){ return state.footer.availability; },
+    function(v){ mutate(function(s){ s.footer.availability = v; }); });
+
+  /* -- explications (énergie / disponibilité) -- */
+  function wireNote(btnId, popId, textareaId, clearId, setId, getVal, setVal){
+    document.getElementById(btnId).addEventListener("click", function(ev){
+      document.getElementById(textareaId).value = getVal() || "";
+      openPopover(popId, ev.currentTarget);
+    });
+    document.getElementById(clearId).addEventListener("click", function(){
+      mutate(function(){ setVal(""); });
+      closePopover(popId);
+    });
+    document.getElementById(setId).addEventListener("click", function(){
+      var v = document.getElementById(textareaId).value;
+      mutate(function(){ setVal(v); });
+      closePopover(popId);
+    });
+  }
+  wireNote("btn-energy-note", "pop-energy-note", "pop-energy-note-text", "pop-energy-note-clear", "pop-energy-note-set",
+    function(){ return state.ribbon.energyNote; },
+    function(v){ state.ribbon.energyNote = v; });
+  wireNote("btn-availability-note", "pop-availability-note", "pop-availability-note-text", "pop-availability-note-clear", "pop-availability-note-set",
+    function(){ return state.footer.availabilityNote; },
+    function(v){ state.footer.availabilityNote = v; });
+
+  /* -- timer popover -- */
+  document.getElementById("btn-timer").addEventListener("click", function(ev){
+    var ts = state.footer.since.timestamp;
+    var d = ts ? new Date(ts) : new Date();
+    document.getElementById("pop-timer-date").value = d.getFullYear() + "-" + pad2(d.getMonth()+1) + "-" + pad2(d.getDate());
+    document.getElementById("pop-timer-time").value = pad2(d.getHours()) + ":" + pad2(d.getMinutes());
+    openPopover("pop-timer", ev.currentTarget);
+  });
+  document.getElementById("pop-timer-now").addEventListener("click", function(){
+    mutate(function(s){ s.footer.since.timestamp = Date.now(); });
+    closePopover("pop-timer");
+  });
+  document.getElementById("pop-timer-clear").addEventListener("click", function(){
+    mutate(function(s){ s.footer.since.timestamp = null; });
+    closePopover("pop-timer");
+  });
+  document.getElementById("pop-timer-set").addEventListener("click", function(){
+    var dv = document.getElementById("pop-timer-date").value;
+    var tv = document.getElementById("pop-timer-time").value || "00:00";
+    if (!dv) { closePopover("pop-timer"); return; }
+    var dt = new Date(dv + "T" + tv);
+    if (isNaN(dt.getTime())) { closePopover("pop-timer"); return; }
+    mutate(function(s){ s.footer.since.timestamp = dt.getTime(); });
+    closePopover("pop-timer");
+  });
+
+  /* -- next visit popover -- */
+  document.getElementById("btn-nextvisit").addEventListener("click", function(ev){
+    var ts = state.footer.nextVisit.timestamp;
+    var d = ts ? new Date(ts) : new Date();
+    document.getElementById("pop-nextvisit-date").value = d.getFullYear() + "-" + pad2(d.getMonth()+1) + "-" + pad2(d.getDate());
+    document.getElementById("pop-nextvisit-time").value = pad2(d.getHours()) + ":" + pad2(d.getMinutes());
+    openPopover("pop-nextvisit", ev.currentTarget);
+  });
+  document.getElementById("pop-nextvisit-clear").addEventListener("click", function(){
+    mutate(function(s){ s.footer.nextVisit.timestamp = null; });
+    closePopover("pop-nextvisit");
+  });
+  document.getElementById("pop-nextvisit-set").addEventListener("click", function(){
+    var dv = document.getElementById("pop-nextvisit-date").value;
+    var tv = document.getElementById("pop-nextvisit-time").value || "00:00";
+    if (!dv) { closePopover("pop-nextvisit"); return; }
+    var dt = new Date(dv + "T" + tv);
+    if (isNaN(dt.getTime())) { closePopover("pop-nextvisit"); return; }
+    mutate(function(s){ s.footer.nextVisit.timestamp = dt.getTime(); });
+    closePopover("pop-nextvisit");
+  });
+
+  /* -- urgence & contacts (fenêtre centrée) -- */
+  function renderEmergencyNumbers(){
+    var wrap = document.getElementById("pop-emergency-numbers");
+    clearNode(wrap);
+    var arr = state.footer.emergency.numbers;
+    if (!arr.length){
+      wrap.appendChild(h("p", { class:"empty-hint", text:"Aucun numéro enregistré." }));
+      return;
+    }
+    arr.forEach(function(it){
+      var editBtn = h("button", { type:"button", class:"edit", title:"Modifier", onclick: function(){
+        var newLabel = promptEdit(it.label, "Nom du contact");
+        if (newLabel === null) return;
+        var newValue = promptEdit(it.value, "Numéro");
+        if (newValue === null) return;
+        mutate(function(){ it.label = newLabel; it.value = newValue; });
+        renderEmergencyNumbers();
+      }}, ["✎"]);
+      var delBtn = h("button", { type:"button", class:"x", title:"Supprimer", onclick: function(){
+        mutate(function(){ var idx = arr.indexOf(it); if (idx >= 0) arr.splice(idx, 1); });
+        renderEmergencyNumbers();
+      }}, ["×"]);
+      wrap.appendChild(h("div", { class:"regitem" }, [
+        h("span", { class:"label", text: it.label + " — " + it.value }),
+        editBtn, delBtn
+      ]));
+    });
+  }
+
+  document.getElementById("pop-emergency-number-add").addEventListener("click", function(){
+    var labelInput = document.getElementById("pop-emergency-number-label");
+    var valueInput = document.getElementById("pop-emergency-number-value");
+    var label = labelInput.value.trim(), value = valueInput.value.trim();
+    if (!label || !value) return;
+    mutate(function(s){ s.footer.emergency.numbers.push({ id: uid("em_"), label: label, value: value }); });
+    labelInput.value = ""; valueInput.value = "";
+    renderEmergencyNumbers();
+  });
+
+  document.getElementById("pop-emergency-restore").addEventListener("click", function(){
+    mutate(function(s){
+      defaultEmergencyNumbers().forEach(function(def){
+        if (!s.footer.emergency.numbers.some(function(n){ return n.label === def.label; })){
+          s.footer.emergency.numbers.push(def);
+        }
+      });
+    });
+    renderEmergencyNumbers();
+  });
+
+  document.getElementById("pop-emergency-psy").addEventListener("input", function(){
+    var v = this.value;
+    mutate(function(s){ s.footer.emergency.psychiatrist = v; });
+  });
+  document.getElementById("pop-emergency-psychologue").addEventListener("input", function(){
+    var v = this.value;
+    mutate(function(s){ s.footer.emergency.psychologist = v; });
+  });
+
+  document.getElementById("btn-emergency-open").addEventListener("click", function(){
+    renderEmergencyNumbers();
+    document.getElementById("pop-emergency-psy").value = state.footer.emergency.psychiatrist || "";
+    document.getElementById("pop-emergency-psychologue").value = state.footer.emergency.psychologist || "";
+    document.getElementById("pop-emergency").classList.add("open");
+  });
+  document.getElementById("pop-emergency-close").addEventListener("click", function(){
+    closePopover("pop-emergency");
+  });
+
+  /* -- simple toggles -- */
+  document.getElementById("btn-verbal").addEventListener("click", function(){
+    mutate(function(s){ s.ribbon.verbal = !s.ribbon.verbal; });
+  });
+  document.getElementById("btn-masking").addEventListener("click", function(){
+    mutate(function(s){ s.ribbon.masking = !s.ribbon.masking; });
+  });
+
+  /* -- tabs -- */
+  document.querySelectorAll(".tab-btn").forEach(function(btn){
+    btn.addEventListener("click", function(){ setActiveTab(btn.dataset.tab); requestAnimationFrame(updateRibbonSizeVars); });
+  });
+
+  /* -- theme -- */
+  function applyTheme(mode){
+    if (mode === "light" || mode === "dark") document.documentElement.setAttribute("data-theme", mode);
+    else document.documentElement.removeAttribute("data-theme");
+  }
+  var storedTheme = null;
+  try { storedTheme = localStorage.getItem("bi_theme"); } catch(e){}
+  applyTheme(storedTheme);
+  document.getElementById("btn-theme").addEventListener("click", function(){
+    var current = document.documentElement.getAttribute("data-theme");
+    var prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+    var next;
+    if (!current) next = prefersDark ? "light" : "dark";
+    else if (current === "dark") next = "light";
+    else next = null;
+    applyTheme(next);
+    try { if (next) localStorage.setItem("bi_theme", next); else localStorage.removeItem("bi_theme"); } catch(e){}
+  });
+
+  /* -- export / import des données -- */
+  document.getElementById("btn-export").addEventListener("click", exportState);
+  document.getElementById("btn-import").addEventListener("click", function(){
+    document.getElementById("input-import").click();
+  });
+  document.getElementById("input-import").addEventListener("change", function(e){
+    var file = e.target.files && e.target.files[0];
+    importStateFromFile(file);
+    e.target.value = ""; // permet de réimporter le même fichier plus tard
+  });
+
+  /* ---------------- init ---------------- */
+  renderAll();
+  renderUpdatedNote();
+  updateClock();
+  setInterval(updateClock, 20000);
+  setInterval(renderTimerLabel, 60000);
+  window.addEventListener("resize", updateRibbonSizeVars);
+
+  hydrateFromStorage();
+
+})();
+</script>
+
+<script>
+  // Enregistrement du service worker pour le fonctionnement hors-ligne.
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", function(){
+      navigator.serviceWorker.register("sw.js").catch(function(){});
+    });
+  }
+</script>
+
+</body>
+</html>
