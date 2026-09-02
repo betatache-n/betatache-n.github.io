@@ -140,6 +140,17 @@
   .cluster{ display:flex; align-items:center; gap:8px; }
   .cluster-grow{ flex:1 1 auto; justify-content:center; flex-wrap:wrap; }
 
+  /* Le "depuis quand" et la "prochaine visite psy" doivent toujours rester
+     côte à côte (jamais l'un sous l'autre) et se réduire au lieu de
+     déborder : chacun prend une part égale de la largeur disponible et
+     tronque son texte plutôt que de forcer un retour à la ligne. */
+  .timer-row{ flex-wrap:nowrap; min-width:0; gap:6px; }
+  .timer-row > #btn-timer,
+  .timer-row > .gauge-block{ flex:1 1 0; min-width:0; }
+  .timer-row .timer-chip{ width:100%; }
+  .timer-row .timer-chip .k,
+  .timer-row .timer-chip .v{ max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+
   .datetime{ display:flex; flex-direction:column; line-height:1.2; min-width:82px; }
   .datetime .day{ font-size:11px; text-transform:uppercase; letter-spacing:0.06em; color:var(--text-muted); }
   .datetime .time{ font-size:16px; font-weight:600; }
@@ -214,11 +225,11 @@
   .timer-chip{
     display:inline-flex; flex-direction:column; align-items:flex-start; gap:1px;
     border:1px solid var(--border); background:var(--surface-2);
-    border-radius:10px; padding:5px 10px; cursor:pointer; text-align:left;
+    border-radius:10px; padding:4px 8px; cursor:pointer; text-align:left;
   }
   .timer-chip:hover{ background:var(--surface-3); }
-  .timer-chip .k{ font-size:9.5px; text-transform:uppercase; letter-spacing:.06em; color:var(--text-muted); }
-  .timer-chip .v{ font-size:13px; font-weight:700; }
+  .timer-chip .k{ font-size:8.5px; text-transform:uppercase; letter-spacing:.06em; color:var(--text-muted); }
+  .timer-chip .v{ font-size:12px; font-weight:700; }
 
   .updated-note-row{
     display:flex; align-items:center; justify-content:center; gap:10px;
@@ -465,9 +476,10 @@
     .gauge-label{ font-size:11px; }
     .gauge-caption{ display:none; }
     .note-link{ font-size:9.5px; max-width:110px; }
-    .timer-chip{ padding:4px 8px; }
-    .timer-chip .k{ font-size:8.5px; }
-    .timer-chip .v{ font-size:12px; }
+    .timer-chip{ padding:3px 6px; }
+    .timer-chip .k{ font-size:8px; }
+    .timer-chip .v{ font-size:11px; }
+    .timer-row{ gap:5px; }
     .cluster{ gap:6px; }
     .cluster-grow{ gap:6px; }
     .tabbar-inner{ gap:2px; }
@@ -572,14 +584,14 @@
       <button type="button" class="voyant-btn voyant-btn-need" id="btn-need" title="Besoin immédiat — appuyer pour changer (jusqu'à 3)">
         <span class="need-list" id="need-list"></span>
       </button>
-      <div class="cluster cluster-grow" style="align-items:flex-start;">
+      <div class="cluster cluster-grow timer-row" style="align-items:flex-start;">
         <button type="button" class="timer-chip" id="btn-timer" title="Depuis quand — approximatif">
-          <span class="k">Dans cet état depuis</span>
+          <span class="k">Depuis</span>
           <span class="v mono" id="timer-label">Non renseigné</span>
         </button>
         <div class="gauge-block" style="align-items:flex-start;">
           <button type="button" class="timer-chip" id="btn-nextvisit" title="Prochaine visite psy">
-            <span class="k">Prochaine visite psy</span>
+            <span class="k">Visite psy</span>
             <span class="v mono" id="nextvisit-label">Non prévue</span>
           </button>
           <button type="button" class="note-link" id="btn-emergency-open">Urgence &amp; contacts</button>
@@ -1324,14 +1336,7 @@
     var d = new Date(ts);
     var days = ["dim.","lun.","mar.","mer.","jeu.","ven.","sam."];
     var months = ["janv.","févr.","mars","avr.","mai","juin","juil.","août","sept.","oct.","nov.","déc."];
-    var datePart = days[d.getDay()] + " " + d.getDate() + " " + months[d.getMonth()] + " · " + pad2(d.getHours()) + ":" + pad2(d.getMinutes());
-    var diffDays = Math.round((ts - Date.now()) / 86400000);
-    var rel;
-    if (ts < Date.now()) rel = "passée";
-    else if (diffDays <= 0) rel = "aujourd'hui";
-    else if (diffDays === 1) rel = "demain";
-    else rel = "dans " + diffDays + " j";
-    return datePart + " (" + rel + ")";
+    return days[d.getDay()] + " " + d.getDate() + " " + months[d.getMonth()] + " · " + pad2(d.getHours()) + ":" + pad2(d.getMinutes());
   }
 
   function renderNextVisitLabel(){
