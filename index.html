@@ -2,11 +2,32 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta http-equiv="refresh" content="0; url=./barometre-interieur-partage.html">
 <link rel="canonical" href="./barometre-interieur-partage.html">
 <title>Baromètre Intérieur</title>
+<meta name="description" content="Suivi personnel : énergie, besoins, symptômes et sujets à aborder.">
+
+<!-- PWA : manifest + icônes (dupliqué depuis barometre-interieur-partage.html
+     pour que les outils qui scannent l'URL racine, comme PWABuilder, le
+     trouvent sans avoir à suivre la redirection ci-dessus) -->
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="theme-color" content="#4B6B60">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Baromètre">
 </head>
 <body>
 <p><a href="./barometre-interieur-partage.html">Ouvrir le Baromètre Intérieur</a></p>
+<script>
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", function(){
+      navigator.serviceWorker.register("sw.js").catch(function(){});
+    });
+  }
+</script>
 </body>
 </html>
